@@ -36,7 +36,12 @@ does not load for your friend, use option B.
 
 ### Option B: a small VPS in Hong Kong, Singapore or Tokyo
 
-Any 1 GB Ubuntu server is enough. On the server:
+The quick way, on a fresh Amazon Linux 2023 or Ubuntu server with ports 80 and 443 open:
+
+    curl -fsSL https://raw.githubusercontent.com/AtomiqTraders/qiao/main/install.sh | sudo bash
+
+It installs everything, switches on HTTPS, and prints your first-account link.
+The manual steps, if you prefer them, on a 1 GB Ubuntu server:
 
     curl -fsSL https://deb.nodesource.com/setup_22.x | sudo bash -
     sudo apt install -y nodejs unzip
