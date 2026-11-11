@@ -100,6 +100,6 @@ not encrypted, so treat it as a stopgap.
   access to the server can read them.
 - To translate, the server sends message text to Google Translate's free endpoint
   (MyMemory as backup). Set `TRANSLATE_ENDPOINT` to use a different compatible service.
-- There is no password reset. If someone forgets theirs, remove their entry (below)
-  and invite them again.
-- To remove someone, stop the server, delete their entry from `data/db.json`, and start it again.
+- The first account is the admin. The **Admin** link in the chat list opens a page to remove
+  members, reset a forgotten password, cancel invites, and choose who may invite.
+  The admin cannot read other people's private chats there.

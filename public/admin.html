@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f2b27">
+<title>Qiao admin</title>
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<main id="admin">
+  <div class="admin-wrap">
+    <div class="admin-top">
+      <h1 class="wordmark small">Qiao <span lang="zh">桥</span> admin</h1>
+      <a class="ghost" href="/">Back to chat</a>
+    </div>
+    <p id="adminErr" class="error" role="alert" hidden></p>
+    <div id="adminBody" hidden>
+      <div class="stats" id="stats"></div>
+
+      <h2>Members</h2>
+      <div id="members"></div>
+
+      <h2>Who can invite</h2>
+      <div class="switch" id="inviteMode">
+        <button class="sbtn" type="button" data-mode="all">Every member</button>
+        <button class="sbtn" type="button" data-mode="admin">Only me</button>
+      </div>
+
+      <h2>Unused invites</h2>
+      <div id="invites"></div>
+      <button class="primary" id="newInvite" type="button" style="margin-top:4px">Create invite</button>
+
+      <p class="note" style="margin-top:28px">You can manage members and invites here. Private chats between other people are not shown to the admin.</p>
+    </div>
+  </div>
+</main>
+<div id="toast" role="status" hidden></div>
+<script src="/admin.js"></script>
+</body>
+</html>

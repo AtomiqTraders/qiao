@@ -30,6 +30,7 @@
       invite_body: 'Send this link. It works once and lasts 7 days.',
       copy: 'Copy link', copied: 'Link copied', share: 'Share', close: 'Close',
       f_lang: 'Your language (messages get translated into it)', f_reads: 'Other languages you can read',
+      admin: 'Admin', removed_user: 'Removed member', err_forbidden: 'Only the admin can do that.',
       langs_btn: 'Languages', langs_title: 'Which languages can you read?',
       langs_body: 'Messages in any other language are translated for you.', save: 'Save',
       translate: 'Translate', auto_tr_on: 'Auto-translate: on', auto_tr_off: 'Auto-translate: off',
@@ -66,6 +67,7 @@
       invite_body: '把这个链接发给朋友。只能用一次，7 天内有效。',
       copy: '复制链接', copied: '链接已复制', share: '分享', close: '关闭',
       f_lang: '你的语言（消息会翻译成这种语言）', f_reads: '你还能看懂的其他语言',
+      admin: '管理', removed_user: '已移除的成员', err_forbidden: '只有管理员可以这样做。',
       langs_btn: '语言设置', langs_title: '你能看懂哪些语言？',
       langs_body: '其他语言的消息会自动为你翻译。', save: '保存',
       translate: '翻译', auto_tr_on: '自动翻译：开', auto_tr_off: '自动翻译：关',
@@ -255,6 +257,7 @@
       box.append(roomRow(dmId(u.id), u.name, preview(c && c.last) || t(online.has(u.id) ? 'online' : 'offline'), u));
     }
     $('#meName').textContent = me.name;
+    $('#adminLink').hidden = !me.admin; $('#inviteBtn').hidden = !me.canInvite;
     const total = Object.values(convs).reduce((n, c) => n + (c.unread || 0), 0);
     document.title = (total ? '(' + total + ') ' : '') + 'Qiao 桥';
   }
@@ -288,7 +291,7 @@
     const u = users.get(m.from);
     const newRun = !prev || prev.from !== m.from || m.ts - prev.ts > 5 * 60000 || dayLabel(prev.ts) !== dayLabel(m.ts);
     if (current === 'lobby' && !mine && newRun) {
-      const f = el('div', 'from', u ? u.name : '?'); if (u) f.style.color = u.color; wrap.append(f);
+      const f = el('div', 'from', u ? u.name : t('removed_user')); if (u) f.style.color = u.color; wrap.append(f);
     }
     const b = el('div', 'bubble');
     if (m.img) {
@@ -439,6 +442,7 @@
     ws.onclose = () => {
       if (!wantSocket) return;
       retry++; if (retry > 1) toast(t('reconnecting'), 0);
+      api('/api/me').catch(e => { if (e.status === 401) { $('#toast').hidden = true; current = null; showAuth(); } }); // signed out or removed
       setTimeout(connect, Math.min(1000 * 2 ** (retry - 1), 15000));
     };
   }
@@ -462,6 +466,11 @@
       if (d.conv === current) showTyping();
     } else if (d.t === 'presence') {
       online = new Set(d.online); renderSide(); if (current) renderHead();
+    } else if (d.t === 'gone') {
+      const dm = me && d.id !== me.id ? dmId(d.id) : null;
+      users.delete(d.id);
+      if (dm && current === dm) { current = null; document.body.classList.remove('in-chat'); $('#pane').hidden = true; $('#noChat').hidden = false; }
+      renderSide(); if (current) renderMsgs(true);
     } else if (d.t === 'user') {
       users.set(d.user.id, d.user); renderSide();
     } else if (d.t === 'read') {

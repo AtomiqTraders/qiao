@@ -167,3 +167,29 @@ dialog .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
   .chat-head { padding: 10px 12px 10px 6px; }
   .msg { max-width: 84%; }
 }
+
+/* ----- admin ----- */
+a.ghost { padding: 8px 12px; border-radius: 999px; text-decoration: none; font-size: .9rem; }
+#admin { height: 100dvh; overflow-y: auto; }
+.admin-wrap { max-width: 720px; margin: 0 auto; padding: 16px 16px 48px; }
+.admin-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.admin-wrap h2 { font: 600 1.25rem/1.3 var(--serif); margin: 28px 4px 10px; }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.stat { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px; }
+.stat b { display: block; font-size: 1.375rem; }
+.stat span { color: var(--soft); font-size: .8125rem; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px; margin-bottom: 10px; }
+.card .head { display: flex; align-items: center; gap: 12px; }
+.card .who { font-weight: 600; }
+.card .meta { color: var(--soft); font-size: .8125rem; overflow-wrap: anywhere; }
+.card .acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.sbtn { font-size: .875rem; padding: 7px 14px; border: 1px solid var(--line); color: var(--ink); }
+.sbtn:hover { background: var(--raise); }
+.sbtn.danger { color: var(--danger); }
+.sbtn.armed { background: var(--danger); border-color: var(--danger); color: var(--bg); font-weight: 600; }
+.tag { font-size: .75rem; border: 1px solid var(--candle); color: var(--candle); border-radius: 999px; padding: 1px 8px; margin-left: 6px; font-weight: 400; }
+.newpass { margin-top: 10px; padding: 10px 12px; background: var(--bg); border-radius: 12px; }
+.newpass code { font: 600 1.125rem ui-monospace, monospace; user-select: all; color: var(--candle); }
+.switch { display: flex; gap: 8px; flex-wrap: wrap; }
+.switch button[aria-pressed="true"] { background: var(--candle); border-color: var(--candle); color: var(--candle-ink); font-weight: 600; }
+.empty-note { color: var(--soft); padding: 4px; }

@@ -29,6 +29,11 @@ fs.mkdirSync(UP, { recursive: true });
 let db = { users: {}, sessions: {}, invites: {} };
 if (fs.existsSync(DB_FILE)) db = Object.assign(db, JSON.parse(fs.readFileSync(DB_FILE, 'utf8')));
 for (const k of ['users', 'sessions', 'invites']) db[k] = Object.assign(Object.create(null), db[k]);
+db.settings = Object.assign({ invites: 'all' }, db.settings);
+// the first account is the admin; sites created before admins existed promote their oldest account
+if (Object.keys(db.users).length && !Object.values(db.users).some(u => u.admin)) {
+  Object.values(db.users).sort((a, b) => a.ts - b.ts)[0].admin = true;
+}
 let saveTimer = null;
 function flush() {
   if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
@@ -113,7 +118,7 @@ const rid = (n = 9) => crypto.randomBytes(n).toString('base64url');
 const sha = s => crypto.createHash('sha256').update(s).digest('hex');
 const hashPw = (pw, salt) => crypto.scryptSync(pw, salt, 32).toString('hex');
 const pub = u => ({ id: u.id, name: u.name, color: u.color });
-const own = u => ({ ...pub(u), lang: u.lang || null, reads: u.reads || [] });
+const own = u => ({ ...pub(u), lang: u.lang || null, reads: u.reads || [], admin: !!u.admin, canInvite: !!u.admin || db.settings.invites === 'all' });
 const dmId = (a, b) => 'dm:' + [a, b].sort().join(':');
 function parseUrl(req) { try { return new URL(req.url, 'http://x'); } catch { return null; } }
 
@@ -258,6 +263,7 @@ async function route(req, res) {
     const id = rid(8), salt = rid(12), n = Object.keys(db.users).length;
     const user = db.users[id] = { id, name, key, salt, pass: hashPw(pw, salt), color: COLORS[n % COLORS.length], ts: Date.now(), read: {} };
     Object.assign(user, cleanPrefs(b.lang, b.reads) || {});
+    if (inv.by) user.by = inv.by; else if (n === 0) user.admin = true;
     inv.used = id; save();
     startSession(req, res, id);
     broadcast({ t: 'user', user: pub(user) });
@@ -297,7 +303,58 @@ async function route(req, res) {
     return json(res, 200, { me: own(me) });
   }
 
+  // ---- admin: manage members and invites. Admins cannot read other people's private chats. ----
+  if (p.startsWith('/api/admin')) {
+    if (!me.admin) fail(403, 'forbidden');
+    const nameOf = id => (id && db.users[id] ? db.users[id].name : null);
+    if (p === '/api/admin' && req.method === 'GET') {
+      const count = Object.create(null); let messages = 0;
+      for (const a of convs.values()) for (const m of a) { count[m.from] = (count[m.from] || 0) + 1; messages++; }
+      let photoBytes = 0;
+      for (const f of await fs.promises.readdir(UP)) photoBytes += (await fs.promises.stat(path.join(UP, f))).size;
+      return json(res, 200, {
+        users: Object.values(db.users).sort((a, b) => a.ts - b.ts).map(u => ({ ...pub(u), ts: u.ts, admin: !!u.admin, lang: u.lang || null,
+          by: nameOf(u.by), online: sockets.has(u.id), messages: count[u.id] || 0, me: u.id === me.id })),
+        invites: Object.keys(db.invites).filter(c => validInvite(c)).map(c => ({ code: c, by: nameOf(db.invites[c].by), ts: db.invites[c].ts, expires: db.invites[c].ts + INVITE_TTL })),
+        settings: db.settings, stats: { messages, photoBytes }
+      });
+    }
+    if (req.method !== 'POST') fail(404, 'not_found');
+    const b = await readJson(req);
+    if (p === '/api/admin/settings') {
+      if (b.invites !== 'all' && b.invites !== 'admin') fail(400, 'bad_request');
+      db.settings.invites = b.invites; save();
+      return json(res, 200, { settings: db.settings });
+    }
+    if (p === '/api/admin/revoke') {
+      if (!validInvite(b.code)) fail(404, 'not_found');
+      delete db.invites[b.code]; save();
+      return json(res, 200, { ok: true });
+    }
+    const target = typeof b.id === 'string' && Object.prototype.hasOwnProperty.call(db.users, b.id) ? db.users[b.id] : null;
+    if (!target) fail(404, 'not_found');
+    if (target.id === me.id || target.admin) fail(400, 'bad_request');
+    const signOut = () => {
+      for (const k of Object.keys(db.sessions)) if (db.sessions[k].uid === target.id) delete db.sessions[k];
+      for (const ws of [...(sockets.get(target.id) || [])]) ws.close();
+    };
+    if (p === '/api/admin/reset') { // new one-time password for someone who forgot theirs
+      const password = rid(6);
+      target.salt = rid(12); target.pass = hashPw(password, target.salt);
+      signOut(); save();
+      return json(res, 200, { password });
+    }
+    if (p === '/api/admin/remove') {
+      signOut(); delete db.users[target.id];
+      for (const c of Object.keys(db.invites)) if (db.invites[c].by === target.id && !db.invites[c].used) delete db.invites[c];
+      save(); broadcast({ t: 'gone', id: target.id });
+      return json(res, 200, { ok: true });
+    }
+    fail(404, 'not_found');
+  }
+
   if (p === '/api/invite' && req.method === 'POST') {
+    if (!me.admin && db.settings.invites !== 'all') fail(403, 'forbidden');
     if (limited('iv:' + me.id, 20, 3600000)) fail(429, 'slow_down');
     const code = rid(8);
     db.invites[code] = { by: me.id, ts: Date.now(), used: null }; save();
