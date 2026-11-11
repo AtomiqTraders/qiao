@@ -83,6 +83,11 @@ $HOST {
 	encode gzip
 	reverse_proxy 127.0.0.1:3000
 }
+
+# Short address: typing just the server's numbers sends people on to the secure site.
+http://$IP {
+	redir https://$HOST{uri}
+}
 EOF
 cat > /etc/systemd/system/caddy.service <<'EOF'
 [Unit]
@@ -126,5 +131,6 @@ echo " Translation: $TR"
 echo " Create your account here (first one only):"
 echo "   https://$HOST/?invite=$CODE"
 echo " After that, your site is:  https://$HOST"
+echo " Short address to share:  $IP"
 echo " HTTPS can take up to a minute to switch on the first time."
 echo "============================================================"
