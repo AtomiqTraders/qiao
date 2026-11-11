@@ -29,6 +29,8 @@
       invite_title: 'Invite a friend',
       invite_body: 'Send this link. It works once and lasts 7 days.',
       copy: 'Copy link', copied: 'Link copied', share: 'Share', close: 'Close',
+      translate: 'Translate', auto_tr_on: 'Auto-translate: on', auto_tr_off: 'Auto-translate: off',
+      err_translate_failed: 'Could not translate that message. Try again.',
       reconnecting: 'Reconnecting…', not_sent: 'Not connected. Your message was not sent.',
       err_bad_invite: 'That invite code is wrong, used, or expired.',
       err_bad_name: 'Pick a name between 2 and 20 characters.',
@@ -60,6 +62,8 @@
       invite_title: '邀请朋友',
       invite_body: '把这个链接发给朋友。只能用一次，7 天内有效。',
       copy: '复制链接', copied: '链接已复制', share: '分享', close: '关闭',
+      translate: '翻译', auto_tr_on: '自动翻译：开', auto_tr_off: '自动翻译：关',
+      err_translate_failed: '翻译失败，请再试一次。',
       reconnecting: '正在重新连接…', not_sent: '未连接，消息没有发出。',
       err_bad_invite: '邀请码不对、已被使用或已过期。',
       err_bad_name: '名字需要 2 到 20 个字符。',
@@ -114,6 +118,7 @@
     document.querySelectorAll('[data-i18n]').forEach(n => { n.textContent = t(n.dataset.i18n); });
     document.querySelectorAll('[data-lang]').forEach(n => { n.textContent = lang === 'zh' ? 'English' : '中文'; });
     $('#input').placeholder = t('type_here');
+    showAutoTr();
     $('#authGo').textContent = t(mode === 'login' ? 'go_login' : 'go_join');
     if (me) { renderSide(); if (current) { renderHead(); renderMsgs(true); } }
     showInvitedBy();
@@ -248,25 +253,50 @@
     wrap.append(b, tm);
     return wrap;
   }
-  // Messages from other people are shown with a translation into the reader's language.
-  const trCache = new Map(); // "id|lang" -> text, null (same language) or a pending promise
-  function addTranslation(m, bubble) {
-    if (!m.text || m.from === me.id) return;
+  // Translation of other people's messages into the reader's language:
+  // automatic when the switch is on, otherwise a "Translate" button under each message.
+  let autoTr = store.get('qiao_autotr') !== '0';
+  const trCache = new Map(); // "id|lang" -> text, null (nothing to translate) or a pending promise
+  const HAN = /[\u3400-\u9fff]/, NON_LATIN_LETTER = /(?=\p{L})[^\p{Script=Latin}]/u;
+  function needsTr(text) { // same rule as the server
+    if (!/\p{L}/u.test(text)) return false;
+    return lang === 'zh' ? !HAN.test(text) : NON_LATIN_LETTER.test(text);
+  }
+  function fetchTr(m) {
     const key = m.id + '|' + lang, hit = trCache.get(key);
+    if (hit !== undefined && typeof hit !== 'string' && hit !== null) return hit;
+    if (hit !== undefined) return Promise.resolve(hit);
+    const job = post('/api/translate', { conv: m.conv, id: m.id, to: lang })
+      .then(r => { trCache.set(key, r.text); return r.text; })
+      .catch(e => { trCache.delete(key); throw e; });
+    trCache.set(key, job);
+    return job;
+  }
+  function addTranslation(m, bubble) {
+    if (!m.text || m.from === me.id || !needsTr(m.text)) return;
     const show = text => {
       if (!text) return;
       const wasStuck = stick;
       bubble.append(el('span', 'tr', text));
       if (wasStuck) toBottom();
     };
-    if (typeof hit === 'string') { bubble.append(el('span', 'tr', hit)); return; }
+    const hit = trCache.get(m.id + '|' + lang);
+    if (typeof hit === 'string') return show(hit);
     if (hit === null) return;
-    const job = hit || post('/api/translate', { conv: m.conv, id: m.id, to: lang })
-      .then(r => { trCache.set(key, r.text); return r.text; })
-      .catch(() => { trCache.delete(key); return null; });
-    if (!hit) trCache.set(key, job);
-    job.then(show);
+    if (autoTr) { fetchTr(m).then(show).catch(() => {}); return; }
+    const btn = el('button', 'tr trbtn', t('translate')); btn.type = 'button';
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      try { const text = await fetchTr(m); btn.remove(); show(text); }
+      catch (e) { btn.disabled = false; toast(errText(e.code === 'slow_down' ? e.code : 'translate_failed')); }
+    });
+    bubble.append(btn);
   }
+  function showAutoTr() { $('#trToggle').textContent = t(autoTr ? 'auto_tr_on' : 'auto_tr_off'); $('#trToggle').setAttribute('aria-pressed', autoTr); }
+  $('#trToggle').addEventListener('click', () => {
+    autoTr = !autoTr; store.set('qiao_autotr', autoTr ? '1' : '0'); showAutoTr();
+    if (current) renderMsgs(true);
+  });
   let stick = true;
   const box = $('#msgs');
   const toBottom = () => { box.scrollTop = box.scrollHeight; };

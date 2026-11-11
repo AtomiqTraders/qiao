@@ -6,7 +6,8 @@ so nobody needs an app store, a phone number, or a VPN.
 - Invite-only accounts (name + password)
 - Lobby for everyone, plus one-to-one chats
 - Photos, typing and "here now" indicators, unread counts
-- Automatic translation: messages from others appear with a translation into your language
+- Translation: messages in another script get a translation into your language, automatically
+  or with a Translate button (each person picks with the Auto-translate switch)
 - English and 中文, switchable on every screen
 - Nothing is loaded from outside sites (no Google fonts or CDNs), so pages load the same everywhere
 - "Add to Home screen" in the browser menu makes it open like an app
