@@ -113,9 +113,16 @@ systemctl is-active -q qiao  || { echo "Qiao failed to start:";  journalctl -u q
 systemctl is-active -q caddy || { echo "Caddy failed to start:"; journalctl -u caddy -n 20 --no-pager; exit 1; }
 curl -fsS --max-time 5 http://127.0.0.1:3000/ >/dev/null || { echo "Qiao is not answering on port 3000."; exit 1; }
 
+if curl -fsS --max-time 8 "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=zh-CN&dt=t&q=hello" | grep -q '\[\[\["'; then
+  TR="working"
+else
+  TR="NOT reachable from this server (chat still works, without translations)"
+fi
+
 echo
 echo "============================================================"
 echo " Qiao is running."
+echo " Translation: $TR"
 echo " Create your account here (first one only):"
 echo "   https://$HOST/?invite=$CODE"
 echo " After that, your site is:  https://$HOST"

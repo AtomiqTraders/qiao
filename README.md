@@ -6,6 +6,7 @@ so nobody needs an app store, a phone number, or a VPN.
 - Invite-only accounts (name + password)
 - Lobby for everyone, plus one-to-one chats
 - Photos, typing and "here now" indicators, unread counts
+- Automatic translation: messages from others appear with a translation into your language
 - English and 中文, switchable on every screen
 - Nothing is loaded from outside sites (no Google fonts or CDNs), so pages load the same everywhere
 - "Add to Home screen" in the browser menu makes it open like an app
@@ -95,6 +96,8 @@ not encrypted, so treat it as a stopgap.
 - With HTTPS, messages are encrypted between each phone and your server. They are
   not end-to-end encrypted: they sit on the server as plain text, so anyone with
   access to the server can read them.
+- To translate, the server sends message text to Google Translate's free endpoint
+  (MyMemory as backup). Set `TRANSLATE_ENDPOINT` to use a different compatible service.
 - There is no password reset. If someone forgets theirs, remove their entry (below)
   and invite them again.
 - To remove someone, stop the server, delete their entry from `data/db.json`, and start it again.

@@ -243,10 +243,29 @@
       img.addEventListener('load', () => { if (stick) toBottom(); });
       b.append(img);
     }
-    if (m.text) { const s = el('span'); fillText(s, m.text); b.append(s); }
+    if (m.text) { const s = el('span'); fillText(s, m.text); b.append(s); addTranslation(m, b); }
     const tm = el('time', null, clock(m.ts)); tm.dateTime = new Date(m.ts).toISOString();
     wrap.append(b, tm);
     return wrap;
+  }
+  // Messages from other people are shown with a translation into the reader's language.
+  const trCache = new Map(); // "id|lang" -> text, null (same language) or a pending promise
+  function addTranslation(m, bubble) {
+    if (!m.text || m.from === me.id) return;
+    const key = m.id + '|' + lang, hit = trCache.get(key);
+    const show = text => {
+      if (!text) return;
+      const wasStuck = stick;
+      bubble.append(el('span', 'tr', text));
+      if (wasStuck) toBottom();
+    };
+    if (typeof hit === 'string') { bubble.append(el('span', 'tr', hit)); return; }
+    if (hit === null) return;
+    const job = hit || post('/api/translate', { conv: m.conv, id: m.id, to: lang })
+      .then(r => { trCache.set(key, r.text); return r.text; })
+      .catch(() => { trCache.delete(key); return null; });
+    if (!hit) trCache.set(key, job);
+    job.then(show);
   }
   let stick = true;
   const box = $('#msgs');

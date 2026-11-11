@@ -121,6 +121,7 @@ button svg, .attach svg { width: 24px; height: 24px; fill: none; stroke: current
 .bubble a { color: inherit; }
 .bubble img { display: block; max-width: 100%; max-height: 320px; border-radius: 12px; margin: 2px -4px; cursor: zoom-in; }
 .bubble img + span { display: block; margin-top: 6px; }
+.bubble .tr { display: block; margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--line); color: var(--soft); font-size: .9375rem; }
 .msg time { display: block; font-size: .6875rem; color: var(--soft); margin: 2px 12px 4px; }
 .msg.mine time { text-align: right; }
 #typing { min-height: 1.4em; color: var(--soft); font-size: .8125rem; padding: 0 22px; }

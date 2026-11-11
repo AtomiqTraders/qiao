@@ -18,6 +18,9 @@ const COOKIE = 'qiao_sid';
 const INVITE_TTL = 7 * 24 * 3600 * 1000;
 const SESSION_TTL = 180 * 24 * 3600 * 1000;
 const MAX_UPLOAD = 6 * 1024 * 1024;
+const TR_FILE = path.join(DATA, 'translations.json');
+const TR_LANGS = { en: 'en', zh: 'zh-CN' };
+const TR_ENDPOINT = process.env.TRANSLATE_ENDPOINT || 'https://translate.googleapis.com/translate_a/single';
 const COLORS = ['#f2b950', '#7fd1ae', '#f08a6b', '#8fb8f0', '#d9a0e8', '#b9d86a', '#f0a3b5', '#6fd3d8'];
 
 fs.mkdirSync(UP, { recursive: true });
@@ -43,6 +46,35 @@ if (fs.existsSync(MSG_FILE)) {
   }
 }
 function list(conv) { let a = convs.get(conv); if (!a) convs.set(conv, a = []); return a; }
+
+// ---------- translation ----------
+// Done by the server (not the reader's phone), so it works the same in every country.
+// Results are cached on disk; each message is translated once per language.
+let tr = Object.create(null); // "msgId|lang" -> translated text, or null when no translation is needed
+if (fs.existsSync(TR_FILE)) { try { tr = Object.assign(tr, JSON.parse(fs.readFileSync(TR_FILE, 'utf8'))); } catch { /* start fresh */ } }
+let trTimer = null;
+function saveTr() {
+  if (trTimer) return;
+  trTimer = setTimeout(() => { trTimer = null; fs.writeFile(TR_FILE + '.tmp', JSON.stringify(tr), err => { if (!err) fs.rename(TR_FILE + '.tmp', TR_FILE, () => {}); }); }, 1000);
+}
+async function getJson(url) {
+  const ctl = new AbortController(); const timer = setTimeout(() => ctl.abort(), 7000);
+  try { const r = await fetch(url, { signal: ctl.signal }); if (!r.ok) throw new Error('http ' + r.status); return await r.json(); }
+  finally { clearTimeout(timer); }
+}
+async function translateText(text, target) {
+  try {
+    const d = await getJson(TR_ENDPOINT + '?client=gtx&sl=auto&dt=t&tl=' + target + '&q=' + encodeURIComponent(text));
+    const out = d[0].map(seg => seg[0] || '').join('');
+    if (out) return { text: out, src: String(d[2] || '') };
+  } catch { /* fall through to the backup service */ }
+  const src = /[\u3400-\u9fff]/.test(text) ? 'zh-CN' : 'en';
+  if (src.slice(0, 2) === target.slice(0, 2)) return { text, src };
+  const d = await getJson('https://api.mymemory.translated.net/get?langpair=' + src + '|' + target + '&q=' + encodeURIComponent(text.slice(0, 480)));
+  if (!d.responseData || !d.responseData.translatedText || d.responseStatus !== 200) throw new Error('no translation');
+  return { text: d.responseData.translatedText, src };
+}
+const trPending = new Map();
 
 // ---------- helpers ----------
 const rid = (n = 9) => crypto.randomBytes(n).toString('base64url');
@@ -240,6 +272,28 @@ async function route(req, res) {
     if (before) { const i = a.findIndex(m => m.id === before); if (i >= 0) end = i; }
     const start = Math.max(0, end - 50);
     return json(res, 200, { messages: a.slice(start, end), more: start > 0 });
+  }
+
+  if (p === '/api/translate' && req.method === 'POST') {
+    const b = await readJson(req);
+    const target = Object.prototype.hasOwnProperty.call(TR_LANGS, b.to) ? TR_LANGS[b.to] : null;
+    if (!target || !members(me.id, b.conv)) fail(400, 'bad_request');
+    const m = (convs.get(b.conv) || []).find(x => x.id === b.id);
+    if (!m) fail(404, 'not_found');
+    const key = m.id + '|' + b.to;
+    if (!m.text || /^[\s\d\p{P}\p{S}]*$/u.test(m.text)) return json(res, 200, { text: null });
+    if (key in tr) return json(res, 200, { text: tr[key] });
+    if (limited('tr:' + me.id, 120, 60000)) fail(429, 'slow_down');
+    let job = trPending.get(key);
+    if (!job) {
+      job = translateText(m.text, target).then(r => {
+        const same = r.src.slice(0, 2).toLowerCase() === target.slice(0, 2) || r.text.trim().toLowerCase() === m.text.trim().toLowerCase();
+        tr[key] = same ? null : r.text.slice(0, 8000); saveTr();
+        return tr[key];
+      }).finally(() => trPending.delete(key));
+      trPending.set(key, job);
+    }
+    try { return json(res, 200, { text: await job }); } catch { fail(502, 'translate_failed'); }
   }
 
   if (p === '/api/upload' && req.method === 'POST') {
