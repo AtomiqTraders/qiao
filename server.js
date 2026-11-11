@@ -62,11 +62,22 @@ async function getJson(url) {
   try { const r = await fetch(url, { signal: ctl.signal }); if (!r.ok) throw new Error('http ' + r.status); return await r.json(); }
   finally { clearTimeout(timer); }
 }
+// Decide by the writing system, not by guessing the language: short greetings like "Hii"
+// get misidentified by automatic detection and come back as nonsense.
+const HAN = /[\u3400-\u9fff]/;
+const NON_LATIN_LETTER = /(?=\p{L})[^\p{Script=Latin}]/u;
+function needsTranslation(text, to) {
+  if (!/\p{L}/u.test(text)) return false;        // only emoji, numbers or punctuation
+  if (to === 'zh') return !HAN.test(text);       // already has Chinese characters
+  return NON_LATIN_LETTER.test(text);            // English reader: Latin-script text is shown as written
+}
 async function translateText(text, target) {
+  text = text.replace(/(\p{L})\1{2,}/gu, '$1$1'); // "heyyyy" -> "heyy", easier on the translator
+  const from = HAN.test(text) ? 'zh-CN' : (/\s/.test(text.trim()) ? 'auto' : 'en'); // a lone word is too short to auto-detect
   try {
-    const d = await getJson(TR_ENDPOINT + '?client=gtx&sl=auto&dt=t&tl=' + target + '&q=' + encodeURIComponent(text));
+    const d = await getJson(TR_ENDPOINT + '?client=gtx&dt=t&sl=' + from + '&tl=' + target + '&q=' + encodeURIComponent(text));
     const out = d[0].map(seg => seg[0] || '').join('');
-    if (out) return { text: out, src: String(d[2] || '') };
+    if (out) return { text: out, src: String(d[2] || from) };
   } catch { /* fall through to the backup service */ }
   const src = /[\u3400-\u9fff]/.test(text) ? 'zh-CN' : 'en';
   if (src.slice(0, 2) === target.slice(0, 2)) return { text, src };
@@ -281,7 +292,7 @@ async function route(req, res) {
     const m = (convs.get(b.conv) || []).find(x => x.id === b.id);
     if (!m) fail(404, 'not_found');
     const key = m.id + '|' + b.to;
-    if (!m.text || /^[\s\d\p{P}\p{S}]*$/u.test(m.text)) return json(res, 200, { text: null });
+    if (!m.text || !needsTranslation(m.text, b.to)) return json(res, 200, { text: null });
     if (key in tr) return json(res, 200, { text: tr[key] });
     if (limited('tr:' + me.id, 120, 60000)) fail(429, 'slow_down');
     let job = trPending.get(key);
