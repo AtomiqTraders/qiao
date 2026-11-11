@@ -193,3 +193,11 @@ a.ghost { padding: 8px 12px; border-radius: 999px; text-decoration: none; font-s
 .switch { display: flex; gap: 8px; flex-wrap: wrap; }
 .switch button[aria-pressed="true"] { background: var(--candle); border-color: var(--candle); color: var(--candle-ink); font-weight: 600; }
 .empty-note { color: var(--soft); padding: 4px; }
+
+/* ----- language list (logged out) ----- */
+#uiLangDlg { width: min(86vw, 320px); padding: 10px; }
+.picks { display: grid; gap: 4px; }
+.pick { text-align: left; font-size: 1.125rem; padding: 12px 16px; border-radius: 14px; color: var(--ink); }
+.pick:hover { background: var(--raise); }
+.pick.on { background: var(--candle); color: var(--candle-ink); font-weight: 600; }
+[data-lang] { white-space: nowrap; }

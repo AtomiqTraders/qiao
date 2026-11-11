@@ -85,7 +85,12 @@
       err_server: '服务器出了点问题，请再试一次。'
     }
   };
-  let lang = store.get('qiao_lang') || ((navigator.language || '').toLowerCase().startsWith('zh') ? 'zh' : 'en');
+  Object.assign(T, window.QIAO_I18N || {});
+  const LANGS = { en: 'English', zh: '中文', hi: 'हिन्दी', vi: 'Tiếng Việt', ja: '日本語', ko: '한국어' };
+  const LOCALE = { en: 'en-GB', zh: 'zh-CN', hi: 'hi-IN', vi: 'vi-VN', ja: 'ja-JP', ko: 'ko-KR' };
+  const known = k => Object.prototype.hasOwnProperty.call(LANGS, k);
+  let lang = store.get('qiao_lang');
+  if (!known(lang)) { lang = (navigator.language || '').toLowerCase().slice(0, 2); if (!known(lang)) lang = 'en'; }
   function t(k, ...a) {
     let s = T[lang][k] != null ? T[lang][k] : (T.en[k] != null ? T.en[k] : k);
     a.forEach((v, i) => { s = s.replace('{' + i + '}', v); });
@@ -122,57 +127,77 @@
 
   // ---------- language ----------
   function applyLang() {
-    document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+    document.documentElement.lang = LOCALE[lang];
     document.querySelectorAll('[data-i18n]').forEach(n => { n.textContent = t(n.dataset.i18n); });
-    document.querySelectorAll('[data-lang]').forEach(n => { n.textContent = lang === 'zh' ? 'English' : '中文'; });
+    document.querySelectorAll('[data-lang]').forEach(n => { n.textContent = '🌐 ' + LANGS[lang]; });
     $('#input').placeholder = t('type_here');
     showAutoTr();
     if (mode === 'join' && !$('#auth').hidden) drawJoinPicker();
-    if ($('#langDlg').open) openLangs();
+    if ($('#langDlg').open) openLangs(true);
     $('#authGo').textContent = t(mode === 'login' ? 'go_login' : 'go_join');
     if (me) { renderSide(); if (current) { renderHead(); renderMsgs(true); } }
     showInvitedBy();
   }
+  function setUiLang(k) { if (!known(k) || k === lang) return; lang = k; store.set('qiao_lang', k); applyLang(); }
+  // The globe button: logged in it opens the full language settings, logged out a plain list.
   document.querySelectorAll('[data-lang]').forEach(b => b.addEventListener('click', () => {
-    lang = lang === 'zh' ? 'en' : 'zh'; store.set('qiao_lang', lang); applyLang();
+    if (me) return openLangs();
+    const box = $('#uiLangs'); box.textContent = '';
+    for (const k of Object.keys(LANGS)) {
+      const c = el('button', 'pick' + (k === lang ? ' on' : ''), LANGS[k]); c.type = 'button'; c.lang = LOCALE[k];
+      c.addEventListener('click', () => { pickJoin = null; setUiLang(k); $('#uiLangDlg').close(); });
+      box.append(c);
+    }
+    $('#uiLangDlg').showModal();
   }));
+  $('#uiLangDlg').addEventListener('click', ev => { if (ev.target === $('#uiLangDlg')) $('#uiLangDlg').close(); });
 
   // ---------- language choice ----------
-  const LANGS = { en: 'English', zh: '中文', hi: 'हिन्दी', vi: 'Tiếng Việt', ja: '日本語', ko: '한국어' };
-  function langPicker(box, startLang, startReads) {
+  // One main language per person: the app is shown in it and messages are translated into it.
+  // Language names are always written in their own script, and picking one switches the whole
+  // screen at once, so nobody has to read a language they do not know to get through this.
+  function langPicker(box, startLang, startReads, onMain) {
     box.textContent = '';
-    const sel = el('select');
-    for (const k of Object.keys(LANGS)) { const o = el('option', null, LANGS[k]); o.value = k; sel.append(o); }
-    sel.value = startLang;
-    const chips = el('div', 'chips');
-    const drawChips = () => {
-      const on = new Set([...chips.querySelectorAll('input:checked')].map(i => i.value));
-      chips.textContent = '';
+    let main = known(startLang) ? startLang : 'en';
+    const on = new Set((startReads || []).filter(k => known(k) && k !== main));
+    const mains = el('div', 'chips'), others = el('div', 'chips');
+    const chip = (type, k, checked, change) => {
+      const lab = el('label', 'chip'), inp = el('input'); inp.type = type; inp.value = k; inp.checked = checked;
+      if (type === 'radio') inp.name = 'main-' + box.id;
+      inp.addEventListener('change', () => change(inp.checked));
+      const name = el('span', null, LANGS[k]); name.lang = LOCALE[k];
+      lab.append(inp, name); return lab;
+    };
+    const draw = () => {
+      mains.textContent = ''; others.textContent = '';
       for (const k of Object.keys(LANGS)) {
-        if (k === sel.value) continue;
-        const lab = el('label', 'chip'), cb = el('input'); cb.type = 'checkbox'; cb.value = k; cb.checked = on.has(k);
-        lab.append(cb, el('span', null, LANGS[k])); chips.append(lab);
+        mains.append(chip('radio', k, k === main, () => { main = k; draw(); onMain(k); }));
+        if (k !== main) others.append(chip('checkbox', k, on.has(k), c => { if (c) on.add(k); else on.delete(k); }));
       }
     };
-    for (const k of startReads || []) { const cb = el('input'); cb.type = 'checkbox'; cb.value = k; cb.checked = true; chips.append(cb); }
-    drawChips(); sel.addEventListener('change', drawChips);
-    const l1 = el('label'); l1.append(el('span', null, t('f_lang')), sel);
-    const l2 = el('div', 'field'); l2.append(el('span', null, t('f_reads')), chips);
-    box.append(l1, l2);
-    return () => ({ lang: sel.value, reads: [sel.value, ...[...chips.querySelectorAll('input:checked')].map(i => i.value)] });
+    draw();
+    const f1 = el('div', 'field'); f1.append(el('span', null, t('f_lang')), mains);
+    const f2 = el('div', 'field'); f2.append(el('span', null, t('f_reads')), others);
+    box.append(f1, f2);
+    return () => ({ lang: main, reads: [main, ...[...on].filter(k => k !== main)] });
   }
-  const guessLang = () => { const b = (navigator.language || '').toLowerCase().slice(0, 2); return lang === 'zh' ? 'zh' : (LANGS[b] && b !== 'zh' ? b : 'en'); };
   let pickJoin = null, pickDlg = null;
-  function drawJoinPicker() { const cur = pickJoin ? pickJoin() : { lang: guessLang(), reads: [] }; pickJoin = langPicker($('#joinLangs'), cur.lang, cur.reads); }
-  function openLangs() { pickDlg = langPicker($('#dlgLangs'), me.lang || guessLang(), me.reads || []); $('#closeLangs').hidden = !me.lang; if (!$('#langDlg').open) $('#langDlg').showModal(); }
-  $('#langsBtn').addEventListener('click', openLangs);
+  function drawJoinPicker() { const cur = pickJoin ? pickJoin() : { lang, reads: [] }; pickJoin = langPicker($('#joinLangs'), cur.lang, cur.reads, setUiLang); }
+  function openLangs(redraw) {
+    const cur = redraw === true && pickDlg ? pickDlg() : { lang: me.lang || lang, reads: me.reads || [] };
+    pickDlg = langPicker($('#dlgLangs'), cur.lang, cur.reads, setUiLang);
+    $('#closeLangs').hidden = !me.lang;
+    if (!$('#langDlg').open) $('#langDlg').showModal();
+  }
+  $('#langsBtn').addEventListener('click', () => openLangs());
   $('#closeLangs').addEventListener('click', () => $('#langDlg').close());
   $('#langDlg').addEventListener('cancel', ev => { if (!me || !me.lang) ev.preventDefault(); });
+  $('#langDlg').addEventListener('close', () => { pickDlg = null; if (me && me.lang) setUiLang(me.lang); }); // closed without saving: back to the saved language
   $('#saveLangs').addEventListener('click', async () => {
     try {
       const r = await post('/api/prefs', pickDlg());
       me.lang = r.me.lang; me.reads = r.me.reads; trCache.clear();
-      $('#langDlg').close(); if (current) renderMsgs(true);
+      $('#langDlg').close(); setUiLang(me.lang); if (current) renderMsgs(true);
     } catch (e) { toast(errText(e.code)); }
   });
 
@@ -273,9 +298,9 @@
     const days = Math.round((new Date(now.getFullYear(), now.getMonth(), now.getDate()) - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 864e5);
     if (days === 0) return t('today');
     if (days === 1) return t('yesterday');
-    return d.toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-GB', { day: 'numeric', month: 'long', year: d.getFullYear() === now.getFullYear() ? undefined : 'numeric' });
+    return d.toLocaleDateString(LOCALE[lang], { day: 'numeric', month: 'long', year: d.getFullYear() === now.getFullYear() ? undefined : 'numeric' });
   }
-  const clock = ts => new Date(ts).toLocaleTimeString(lang === 'zh' ? 'zh-CN' : 'en-GB', { hour: '2-digit', minute: '2-digit' });
+  const clock = ts => new Date(ts).toLocaleTimeString(LOCALE[lang], { hour: '2-digit', minute: '2-digit' });
   function fillText(node, text) {
     const re = /https?:\/\/[^\s<>"']+/g; let i = 0, m;
     while ((m = re.exec(text))) {
@@ -563,6 +588,7 @@
     $('#auth').hidden = true; $('#app').hidden = false;
     if (!wantSocket) { wantSocket = true; retry = 0; connect(); }
     if (!narrow()) openConv('lobby', false);
+    if (me.lang) setUiLang(me.lang); // the app follows the language saved on the account
     if (!me.lang) openLangs(); // accounts made before language choice existed
   }
   applyLang();
