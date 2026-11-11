@@ -123,7 +123,18 @@ button svg, .attach svg { width: 24px; height: 24px; fill: none; stroke: current
 .bubble img + span { display: block; margin-top: 6px; }
 .bubble .trbtn { width: 100%; text-align: left; border-radius: 0; padding-left: 0; padding-right: 0; padding-bottom: 0; text-decoration: underline; background: none; }
 .bubble .trbtn:disabled { opacity: .5; }
-#trToggle { font-size: .9rem; text-align: center; }
+.tr-row { display: flex; justify-content: space-between; gap: 8px; }
+.tr-row button { font-size: .9rem; }
+.langs { display: grid; gap: 14px; text-align: left; }
+.langs label > span, .langs .field > span { display: block; font-size: .875rem; color: var(--soft); margin: 0 0 5px 4px; }
+select { width: 100%; background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; font: inherit; }
+dialog select { background: var(--bg); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { position: relative; cursor: pointer; }
+.chip input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+.chip span { display: block; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line); color: var(--soft); }
+.chip input:checked + span { background: var(--candle); border-color: var(--candle); color: var(--candle-ink); font-weight: 600; }
+.chip input:focus-visible + span { outline: 2px solid var(--candle); outline-offset: 2px; }
 #trToggle[aria-pressed="true"] { color: var(--ink); }
 .bubble .tr { display: block; margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--line); color: var(--soft); font-size: .9375rem; }
 .msg time { display: block; font-size: .6875rem; color: var(--soft); margin: 2px 12px 4px; }

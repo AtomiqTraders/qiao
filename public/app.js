@@ -29,6 +29,9 @@
       invite_title: 'Invite a friend',
       invite_body: 'Send this link. It works once and lasts 7 days.',
       copy: 'Copy link', copied: 'Link copied', share: 'Share', close: 'Close',
+      f_lang: 'Your language (messages get translated into it)', f_reads: 'Other languages you can read',
+      langs_btn: 'Languages', langs_title: 'Which languages can you read?',
+      langs_body: 'Messages in any other language are translated for you.', save: 'Save',
       translate: 'Translate', auto_tr_on: 'Auto-translate: on', auto_tr_off: 'Auto-translate: off',
       err_translate_failed: 'Could not translate that message. Try again.',
       reconnecting: 'Reconnecting…', not_sent: 'Not connected. Your message was not sent.',
@@ -62,6 +65,9 @@
       invite_title: '邀请朋友',
       invite_body: '把这个链接发给朋友。只能用一次，7 天内有效。',
       copy: '复制链接', copied: '链接已复制', share: '分享', close: '关闭',
+      f_lang: '你的语言（消息会翻译成这种语言）', f_reads: '你还能看懂的其他语言',
+      langs_btn: '语言设置', langs_title: '你能看懂哪些语言？',
+      langs_body: '其他语言的消息会自动为你翻译。', save: '保存',
       translate: '翻译', auto_tr_on: '自动翻译：开', auto_tr_off: '自动翻译：关',
       err_translate_failed: '翻译失败，请再试一次。',
       reconnecting: '正在重新连接…', not_sent: '未连接，消息没有发出。',
@@ -119,6 +125,8 @@
     document.querySelectorAll('[data-lang]').forEach(n => { n.textContent = lang === 'zh' ? 'English' : '中文'; });
     $('#input').placeholder = t('type_here');
     showAutoTr();
+    if (mode === 'join' && !$('#auth').hidden) drawJoinPicker();
+    if ($('#langDlg').open) openLangs();
     $('#authGo').textContent = t(mode === 'login' ? 'go_login' : 'go_join');
     if (me) { renderSide(); if (current) { renderHead(); renderMsgs(true); } }
     showInvitedBy();
@@ -126,6 +134,45 @@
   document.querySelectorAll('[data-lang]').forEach(b => b.addEventListener('click', () => {
     lang = lang === 'zh' ? 'en' : 'zh'; store.set('qiao_lang', lang); applyLang();
   }));
+
+  // ---------- language choice ----------
+  const LANGS = { en: 'English', zh: '中文', hi: 'हिन्दी', vi: 'Tiếng Việt', ja: '日本語', ko: '한국어' };
+  function langPicker(box, startLang, startReads) {
+    box.textContent = '';
+    const sel = el('select');
+    for (const k of Object.keys(LANGS)) { const o = el('option', null, LANGS[k]); o.value = k; sel.append(o); }
+    sel.value = startLang;
+    const chips = el('div', 'chips');
+    const drawChips = () => {
+      const on = new Set([...chips.querySelectorAll('input:checked')].map(i => i.value));
+      chips.textContent = '';
+      for (const k of Object.keys(LANGS)) {
+        if (k === sel.value) continue;
+        const lab = el('label', 'chip'), cb = el('input'); cb.type = 'checkbox'; cb.value = k; cb.checked = on.has(k);
+        lab.append(cb, el('span', null, LANGS[k])); chips.append(lab);
+      }
+    };
+    for (const k of startReads || []) { const cb = el('input'); cb.type = 'checkbox'; cb.value = k; cb.checked = true; chips.append(cb); }
+    drawChips(); sel.addEventListener('change', drawChips);
+    const l1 = el('label'); l1.append(el('span', null, t('f_lang')), sel);
+    const l2 = el('div', 'field'); l2.append(el('span', null, t('f_reads')), chips);
+    box.append(l1, l2);
+    return () => ({ lang: sel.value, reads: [sel.value, ...[...chips.querySelectorAll('input:checked')].map(i => i.value)] });
+  }
+  const guessLang = () => { const b = (navigator.language || '').toLowerCase().slice(0, 2); return lang === 'zh' ? 'zh' : (LANGS[b] && b !== 'zh' ? b : 'en'); };
+  let pickJoin = null, pickDlg = null;
+  function drawJoinPicker() { const cur = pickJoin ? pickJoin() : { lang: guessLang(), reads: [] }; pickJoin = langPicker($('#joinLangs'), cur.lang, cur.reads); }
+  function openLangs() { pickDlg = langPicker($('#dlgLangs'), me.lang || guessLang(), me.reads || []); $('#closeLangs').hidden = !me.lang; if (!$('#langDlg').open) $('#langDlg').showModal(); }
+  $('#langsBtn').addEventListener('click', openLangs);
+  $('#closeLangs').addEventListener('click', () => $('#langDlg').close());
+  $('#langDlg').addEventListener('cancel', ev => { if (!me || !me.lang) ev.preventDefault(); });
+  $('#saveLangs').addEventListener('click', async () => {
+    try {
+      const r = await post('/api/prefs', pickDlg());
+      me.lang = r.me.lang; me.reads = r.me.reads; trCache.clear();
+      $('#langDlg').close(); if (current) renderMsgs(true);
+    } catch (e) { toast(errText(e.code)); }
+  });
 
   // ---------- sign in ----------
   let invitedBy = null;
@@ -139,6 +186,8 @@
     $('#tabLogin').setAttribute('aria-selected', m === 'login');
     $('#tabJoin').setAttribute('aria-selected', m === 'join');
     $('#inviteField').hidden = m !== 'join';
+    $('#joinLangs').hidden = m !== 'join';
+    if (m === 'join') drawJoinPicker();
     $('#joinHint').hidden = m !== 'join' || !!invitedBy;
     $('#fPass').autocomplete = m === 'login' ? 'current-password' : 'new-password';
     $('#authGo').textContent = t(m === 'login' ? 'go_login' : 'go_join');
@@ -152,7 +201,7 @@
     const btn = $('#authGo'); btn.disabled = true; $('#authErr').hidden = true;
     try {
       const body = { name: $('#fName').value, password: $('#fPass').value };
-      if (mode === 'join') body.invite = $('#fInvite').value.trim();
+      if (mode === 'join') { body.invite = $('#fInvite').value.trim(); Object.assign(body, pickJoin()); }
       await post(mode === 'join' ? '/api/signup' : '/api/login', body);
       history.replaceState(null, '', '/');
       $('#fPass').value = '';
@@ -257,16 +306,36 @@
   // automatic when the switch is on, otherwise a "Translate" button under each message.
   let autoTr = store.get('qiao_autotr') !== '0';
   const trCache = new Map(); // "id|lang" -> text, null (nothing to translate) or a pending promise
-  const HAN = /[\u3400-\u9fff]/, NON_LATIN_LETTER = /(?=\p{L})[^\p{Script=Latin}]/u;
-  function needsTr(text) { // same rule as the server
-    if (!/\p{L}/u.test(text)) return false;
-    return lang === 'zh' ? !HAN.test(text) : NON_LATIN_LETTER.test(text);
+  // Languages are told apart by writing system; keep in sync with detectLangs in server.js.
+  const VI_LETTER = /[ăâđêôơưĂÂĐÊÔƠƯ\u1EA0-\u1EF9]/;
+  function detectLangs(text) {
+    const n = { en: 0, zh: 0, hi: 0, vi: 0, ja: 0, ko: 0, other: 0 };
+    let total = 0, vi = false, kana = false;
+    for (const ch of text.normalize('NFC')) {
+      if (!/\p{L}/u.test(ch)) continue;
+      total++;
+      if (/\p{Script=Han}/u.test(ch)) n.zh++;
+      else if (/[\p{Script=Hiragana}\p{Script=Katakana}]/u.test(ch)) { n.ja++; kana = true; }
+      else if (/\p{Script=Hangul}/u.test(ch)) n.ko++;
+      else if (/\p{Script=Devanagari}/u.test(ch)) n.hi++;
+      else if (/\p{Script=Latin}/u.test(ch)) { n.en++; if (VI_LETTER.test(ch)) vi = true; }
+      else n.other++;
+    }
+    if (!total) return [];
+    if (kana) { n.ja += n.zh; n.zh = 0; }
+    if (vi) { n.vi = n.en; n.en = 0; }
+    return Object.keys(n).filter(k => n[k] / total >= 0.25);
+  }
+  const myLang = () => me.lang || lang;
+  function needsTr(text) {
+    const reads = me.lang ? me.reads : [lang];
+    return detectLangs(text).some(l => !reads.includes(l));
   }
   function fetchTr(m) {
-    const key = m.id + '|' + lang, hit = trCache.get(key);
+    const key = m.id + '|' + myLang(), hit = trCache.get(key);
     if (hit !== undefined && typeof hit !== 'string' && hit !== null) return hit;
     if (hit !== undefined) return Promise.resolve(hit);
-    const job = post('/api/translate', { conv: m.conv, id: m.id, to: lang })
+    const job = post('/api/translate', { conv: m.conv, id: m.id, to: myLang() })
       .then(r => { trCache.set(key, r.text); return r.text; })
       .catch(e => { trCache.delete(key); throw e; });
     trCache.set(key, job);
@@ -280,7 +349,7 @@
       bubble.append(el('span', 'tr', text));
       if (wasStuck) toBottom();
     };
-    const hit = trCache.get(m.id + '|' + lang);
+    const hit = trCache.get(m.id + '|' + myLang());
     if (typeof hit === 'string') return show(hit);
     if (hit === null) return;
     if (autoTr) { fetchTr(m).then(show).catch(() => {}); return; }
@@ -485,6 +554,7 @@
     $('#auth').hidden = true; $('#app').hidden = false;
     if (!wantSocket) { wantSocket = true; retry = 0; connect(); }
     if (!narrow()) openConv('lobby', false);
+    if (!me.lang) openLangs(); // accounts made before language choice existed
   }
   applyLang();
   boot();

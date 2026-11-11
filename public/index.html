@@ -43,6 +43,7 @@
       <label><span data-i18n="f_password"></span>
         <input id="fPass" type="password" autocomplete="current-password" maxlength="200">
       </label>
+      <div id="joinLangs" class="langs" hidden></div>
       <p id="authErr" class="error" role="alert" hidden></p>
       <button class="primary" id="authGo" type="submit"></button>
       <p class="note" id="joinHint" data-i18n="join_hint"></p>
@@ -59,7 +60,10 @@
     <nav id="rooms" aria-label="Conversations"></nav>
     <footer class="side-foot">
       <button class="primary" id="inviteBtn" type="button" data-i18n="invite_btn"></button>
-      <button class="ghost" id="trToggle" type="button"></button>
+      <div class="tr-row">
+        <button class="ghost" id="langsBtn" type="button" data-i18n="langs_btn"></button>
+        <button class="ghost" id="trToggle" type="button"></button>
+      </div>
       <div class="me-row">
         <span id="meName"></span>
         <button class="ghost" id="logoutBtn" type="button" data-i18n="logout"></button>
@@ -105,6 +109,16 @@
     <button class="primary" id="copyBtn" type="button" data-i18n="copy"></button>
     <button class="ghost" id="shareBtn" type="button" data-i18n="share" hidden></button>
     <button class="ghost" id="closeInvite" type="button" data-i18n="close"></button>
+  </div>
+</dialog>
+
+<dialog id="langDlg">
+  <h2 data-i18n="langs_title"></h2>
+  <p data-i18n="langs_body"></p>
+  <div id="dlgLangs" class="langs"></div>
+  <div class="row">
+    <button class="primary" id="saveLangs" type="button" data-i18n="save"></button>
+    <button class="ghost" id="closeLangs" type="button" data-i18n="close"></button>
   </div>
 </dialog>
 

@@ -19,7 +19,7 @@ const INVITE_TTL = 7 * 24 * 3600 * 1000;
 const SESSION_TTL = 180 * 24 * 3600 * 1000;
 const MAX_UPLOAD = 6 * 1024 * 1024;
 const TR_FILE = path.join(DATA, 'translations.json');
-const TR_LANGS = { en: 'en', zh: 'zh-CN' };
+const TR_LANGS = { en: 'en', zh: 'zh-CN', hi: 'hi', vi: 'vi', ja: 'ja', ko: 'ko' }; // our code -> translator's code
 const TR_ENDPOINT = process.env.TRANSLATE_ENDPOINT || 'https://translate.googleapis.com/translate_a/single';
 const COLORS = ['#f2b950', '#7fd1ae', '#f08a6b', '#8fb8f0', '#d9a0e8', '#b9d86a', '#f0a3b5', '#6fd3d8'];
 
@@ -62,24 +62,45 @@ async function getJson(url) {
   try { const r = await fetch(url, { signal: ctl.signal }); if (!r.ok) throw new Error('http ' + r.status); return await r.json(); }
   finally { clearTimeout(timer); }
 }
-// Decide by the writing system, not by guessing the language: short greetings like "Hii"
-// get misidentified by automatic detection and come back as nonsense.
-const HAN = /[\u3400-\u9fff]/;
-const NON_LATIN_LETTER = /(?=\p{L})[^\p{Script=Latin}]/u;
-function needsTranslation(text, to) {
-  if (!/\p{L}/u.test(text)) return false;        // only emoji, numbers or punctuation
-  if (to === 'zh') return !HAN.test(text);       // already has Chinese characters
-  return NON_LATIN_LETTER.test(text);            // English reader: Latin-script text is shown as written
+// Which languages a message is written in, judged by its writing system. Guessing the language
+// of short text is unreliable ("Hii" came back as "This"), scripts are not. Latin script counts as
+// English unless it carries Vietnamese letters. Keep in sync with detectLangs in public/app.js.
+const VI_LETTER = /[ăâđêôơưĂÂĐÊÔƠƯ\u1EA0-\u1EF9]/;
+function detectLangs(text) {
+  const n = { en: 0, zh: 0, hi: 0, vi: 0, ja: 0, ko: 0, other: 0 };
+  let total = 0, vi = false, kana = false;
+  for (const ch of text.normalize('NFC')) {
+    if (!/\p{L}/u.test(ch)) continue;
+    total++;
+    if (/\p{Script=Han}/u.test(ch)) n.zh++;
+    else if (/[\p{Script=Hiragana}\p{Script=Katakana}]/u.test(ch)) { n.ja++; kana = true; }
+    else if (/\p{Script=Hangul}/u.test(ch)) n.ko++;
+    else if (/\p{Script=Devanagari}/u.test(ch)) n.hi++;
+    else if (/\p{Script=Latin}/u.test(ch)) { n.en++; if (VI_LETTER.test(ch)) vi = true; }
+    else n.other++;
+  }
+  if (!total) return [];
+  if (kana) { n.ja += n.zh; n.zh = 0; }
+  if (vi) { n.vi = n.en; n.en = 0; }
+  return Object.keys(n).filter(k => n[k] / total >= 0.25);
+}
+function cleanPrefs(lang, reads) {
+  if (!Object.prototype.hasOwnProperty.call(TR_LANGS, lang)) return null;
+  const set = new Set([lang]);
+  if (Array.isArray(reads)) for (const r of reads.slice(0, 12)) if (Object.prototype.hasOwnProperty.call(TR_LANGS, r)) set.add(r);
+  return { lang, reads: [...set] };
 }
 async function translateText(text, target) {
   text = text.replace(/(\p{L})\1{2,}/gu, '$1$1'); // "heyyyy" -> "heyy", easier on the translator
-  const from = HAN.test(text) ? 'zh-CN' : (/\s/.test(text.trim()) ? 'auto' : 'en'); // a lone word is too short to auto-detect
+  const found = detectLangs(text);
+  const from = found.length === 1 && TR_LANGS[found[0]] && found[0] !== 'en' ? TR_LANGS[found[0]]
+    : (/\s/.test(text.trim()) ? 'auto' : 'en'); // a lone Latin word is too short to auto-detect
   try {
     const d = await getJson(TR_ENDPOINT + '?client=gtx&dt=t&sl=' + from + '&tl=' + target + '&q=' + encodeURIComponent(text));
     const out = d[0].map(seg => seg[0] || '').join('');
     if (out) return { text: out, src: String(d[2] || from) };
   } catch { /* fall through to the backup service */ }
-  const src = /[\u3400-\u9fff]/.test(text) ? 'zh-CN' : 'en';
+  const src = from === 'auto' ? 'en' : from;
   if (src.slice(0, 2) === target.slice(0, 2)) return { text, src };
   const d = await getJson('https://api.mymemory.translated.net/get?langpair=' + src + '|' + target + '&q=' + encodeURIComponent(text.slice(0, 480)));
   if (!d.responseData || !d.responseData.translatedText || d.responseStatus !== 200) throw new Error('no translation');
@@ -92,6 +113,7 @@ const rid = (n = 9) => crypto.randomBytes(n).toString('base64url');
 const sha = s => crypto.createHash('sha256').update(s).digest('hex');
 const hashPw = (pw, salt) => crypto.scryptSync(pw, salt, 32).toString('hex');
 const pub = u => ({ id: u.id, name: u.name, color: u.color });
+const own = u => ({ ...pub(u), lang: u.lang || null, reads: u.reads || [] });
 const dmId = (a, b) => 'dm:' + [a, b].sort().join(':');
 function parseUrl(req) { try { return new URL(req.url, 'http://x'); } catch { return null; } }
 
@@ -235,6 +257,7 @@ async function route(req, res) {
     if (Object.values(db.users).some(u => u.key === key)) fail(409, 'name_taken');
     const id = rid(8), salt = rid(12), n = Object.keys(db.users).length;
     const user = db.users[id] = { id, name, key, salt, pass: hashPw(pw, salt), color: COLORS[n % COLORS.length], ts: Date.now(), read: {} };
+    Object.assign(user, cleanPrefs(b.lang, b.reads) || {});
     inv.used = id; save();
     startSession(req, res, id);
     broadcast({ t: 'user', user: pub(user) });
@@ -264,7 +287,14 @@ async function route(req, res) {
   if (p === '/api/me' && req.method === 'GET') {
     const out = { lobby: summary(me, 'lobby') };
     for (const id of Object.keys(db.users)) if (id !== me.id) { const c = dmId(me.id, id); out[c] = summary(me, c); }
-    return json(res, 200, { me: pub(me), users: Object.values(db.users).map(pub), online: [...sockets.keys()], convs: out });
+    return json(res, 200, { me: own(me), users: Object.values(db.users).map(pub), online: [...sockets.keys()], convs: out });
+  }
+
+  if (p === '/api/prefs' && req.method === 'POST') {
+    const b = await readJson(req);
+    const prefs = cleanPrefs(b.lang, b.reads); if (!prefs) fail(400, 'bad_request');
+    Object.assign(me, prefs); save();
+    return json(res, 200, { me: own(me) });
   }
 
   if (p === '/api/invite' && req.method === 'POST') {
@@ -287,12 +317,14 @@ async function route(req, res) {
 
   if (p === '/api/translate' && req.method === 'POST') {
     const b = await readJson(req);
-    const target = Object.prototype.hasOwnProperty.call(TR_LANGS, b.to) ? TR_LANGS[b.to] : null;
-    if (!target || !members(me.id, b.conv)) fail(400, 'bad_request');
+    // translate into the reader's own language, skipping languages they said they can read
+    const to = me.lang || (Object.prototype.hasOwnProperty.call(TR_LANGS, b.to) ? b.to : null);
+    if (!to || !members(me.id, b.conv)) fail(400, 'bad_request');
+    const target = TR_LANGS[to], reads = me.lang ? me.reads || [to] : [to];
     const m = (convs.get(b.conv) || []).find(x => x.id === b.id);
     if (!m) fail(404, 'not_found');
-    const key = m.id + '|' + b.to;
-    if (!m.text || !needsTranslation(m.text, b.to)) return json(res, 200, { text: null });
+    const key = m.id + '|' + to;
+    if (!m.text || !detectLangs(m.text).some(l => !reads.includes(l))) return json(res, 200, { text: null });
     if (key in tr) return json(res, 200, { text: tr[key] });
     if (limited('tr:' + me.id, 120, 60000)) fail(429, 'slow_down');
     let job = trPending.get(key);
