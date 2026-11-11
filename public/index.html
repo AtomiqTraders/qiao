@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f2b27">
+<title>Qiao 桥</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<main id="auth" hidden>
+  <button class="lang ghost" type="button" data-lang></button>
+  <div class="auth-card">
+    <svg class="bridge" viewBox="0 0 320 120" aria-hidden="true">
+      <path class="water" d="M10 104h300M40 112h240"/>
+      <path class="span" d="M28 92C90 20 230 20 292 92"/>
+      <path class="deck" d="M28 92h264"/>
+      <path class="posts" d="M72 92V58M116 92V40M160 92V34M204 92V40M248 92V58"/>
+      <circle class="glow left" cx="28" cy="78" r="16"/>
+      <circle class="glow right" cx="292" cy="78" r="16"/>
+      <path class="wick left" d="M28 66c5 6 7 10 7 14a7 7 0 0 1-14 0c0-4 2-8 7-14z"/>
+      <path class="wick right" d="M292 66c5 6 7 10 7 14a7 7 0 0 1-14 0c0-4 2-8 7-14z"/>
+    </svg>
+    <h1 class="wordmark">Qiao <span lang="zh">桥</span></h1>
+    <p class="tagline" data-i18n="tagline"></p>
+
+    <div class="tabs" role="tablist">
+      <button type="button" role="tab" id="tabLogin" data-i18n="tab_login"></button>
+      <button type="button" role="tab" id="tabJoin" data-i18n="tab_join"></button>
+    </div>
+    <form id="authForm" novalidate>
+      <p id="inviteBy" class="note" hidden></p>
+      <label id="inviteField"><span data-i18n="f_invite"></span>
+        <input id="fInvite" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="60">
+      </label>
+      <label><span data-i18n="f_name"></span>
+        <input id="fName" autocomplete="username" autocapitalize="off" spellcheck="false" maxlength="40">
+      </label>
+      <label><span data-i18n="f_password"></span>
+        <input id="fPass" type="password" autocomplete="current-password" maxlength="200">
+      </label>
+      <p id="authErr" class="error" role="alert" hidden></p>
+      <button class="primary" id="authGo" type="submit"></button>
+      <p class="note" id="joinHint" data-i18n="join_hint"></p>
+    </form>
+  </div>
+</main>
+
+<div id="app" hidden>
+  <aside id="side">
+    <header class="side-head">
+      <h1 class="wordmark small">Qiao <span lang="zh">桥</span></h1>
+      <button class="ghost" type="button" data-lang></button>
+    </header>
+    <nav id="rooms" aria-label="Conversations"></nav>
+    <footer class="side-foot">
+      <button class="primary" id="inviteBtn" type="button" data-i18n="invite_btn"></button>
+      <div class="me-row">
+        <span id="meName"></span>
+        <button class="ghost" id="logoutBtn" type="button" data-i18n="logout"></button>
+      </div>
+    </footer>
+  </aside>
+
+  <section id="chat">
+    <div id="noChat"><p data-i18n="pick_chat"></p></div>
+    <div id="pane" hidden>
+      <header class="chat-head">
+        <button class="ghost back" id="backBtn" type="button" aria-label="Back">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+        </button>
+        <div>
+          <h2 id="chatTitle"></h2>
+          <p id="chatSub"></p>
+        </div>
+      </header>
+      <div id="msgs" tabindex="0">
+        <button class="ghost" id="olderBtn" type="button" data-i18n="older" hidden></button>
+        <div id="msgList"></div>
+      </div>
+      <p id="typing" aria-live="polite"></p>
+      <form id="composer">
+        <label class="attach" id="attachBtn">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="14" rx="3"/><circle cx="9" cy="10" r="1.6"/><path d="M4.5 17l5-4.5 3.5 3 3-2.5 4 3.5"/></svg>
+          <span class="sr" data-i18n="send_photo"></span>
+          <input id="file" type="file" accept="image/jpeg,image/png,image/gif,image/webp" hidden>
+        </label>
+        <textarea id="input" rows="1" maxlength="4000" enterkeyhint="send"></textarea>
+        <button class="primary send" id="sendBtn" type="submit" data-i18n="send"></button>
+      </form>
+    </div>
+  </section>
+</div>
+
+<dialog id="inviteDlg">
+  <h2 data-i18n="invite_title"></h2>
+  <p data-i18n="invite_body"></p>
+  <input id="inviteLink" readonly>
+  <div class="row">
+    <button class="primary" id="copyBtn" type="button" data-i18n="copy"></button>
+    <button class="ghost" id="shareBtn" type="button" data-i18n="share" hidden></button>
+    <button class="ghost" id="closeInvite" type="button" data-i18n="close"></button>
+  </div>
+</dialog>
+
+<dialog id="photoDlg"><img id="photoBig" alt=""></dialog>
+<div id="toast" role="status" hidden></div>
+
+<script src="/app.js"></script>
+</body>
+</html>
