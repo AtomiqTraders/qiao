@@ -33,6 +33,9 @@
       admin: 'Admin', removed_user: 'Removed member', err_forbidden: 'Only the admin can do that.',
       langs_btn: 'Languages', langs_title: 'Which languages can you read?',
       langs_body: 'Messages in any other language are translated for you.', save: 'Save',
+      notif_on: '🔔 Notifications: on', notif_off: '🔕 Notifications: off', notif_blocked: '🔕 Notifications: blocked',
+      notif_unsupported: 'This browser cannot show notifications. On iPhone, add Qiao to the Home Screen first.',
+      notif_blocked_help: 'Notifications are blocked. Allow them for this site in your browser settings, then try again.',
       translate: 'Translate', auto_tr_on: 'Auto-translate: on', auto_tr_off: 'Auto-translate: off',
       err_translate_failed: 'Could not translate that message. Try again.',
       reconnecting: 'Reconnecting…', not_sent: 'Not connected. Your message was not sent.',
@@ -70,6 +73,9 @@
       admin: '管理', removed_user: '已移除的成员', err_forbidden: '只有管理员可以这样做。',
       langs_btn: '语言设置', langs_title: '你能看懂哪些语言？',
       langs_body: '其他语言的消息会自动为你翻译。', save: '保存',
+      notif_on: '🔔 消息通知：开', notif_off: '🔕 消息通知：关', notif_blocked: '🔕 消息通知：被阻止',
+      notif_unsupported: '这个浏览器不能显示通知。iPhone 需要先把 Qiao 添加到主屏幕。',
+      notif_blocked_help: '通知被阻止了。请在浏览器设置里允许这个网站发送通知，然后再试一次。',
       translate: '翻译', auto_tr_on: '自动翻译：开', auto_tr_off: '自动翻译：关',
       err_translate_failed: '翻译失败，请再试一次。',
       reconnecting: '正在重新连接…', not_sent: '未连接，消息没有发出。',
@@ -131,7 +137,7 @@
     document.querySelectorAll('[data-i18n]').forEach(n => { n.textContent = t(n.dataset.i18n); });
     document.querySelectorAll('[data-lang]').forEach(n => { n.textContent = '🌐 ' + LANGS[lang]; });
     $('#input').placeholder = t('type_here');
-    showAutoTr();
+    showAutoTr(); showNotif();
     if (mode === 'join' && !$('#auth').hidden) drawJoinPicker();
     if ($('#langDlg').open) openLangs(true);
     $('#authGo').textContent = t(mode === 'login' ? 'go_login' : 'go_join');
@@ -248,7 +254,7 @@
     }
     setMode(code ? 'join' : 'login');
   }
-  $('#logoutBtn').addEventListener('click', async () => { try { await post('/api/logout'); } catch { /* signed out anyway */ } current = null; showAuth(); });
+  $('#logoutBtn').addEventListener('click', async () => { try { if (pushSub) { await post('/api/push/unsubscribe', { endpoint: pushSub.endpoint }); await pushSub.unsubscribe(); pushSub = null; } await post('/api/logout'); } catch { /* signed out anyway */ } current = null; showAuth(); });
 
   // ---------- conversation list ----------
   function preview(m) {
@@ -452,6 +458,51 @@
   }
 
   // ---------- socket ----------
+  // ---------- phone notifications ----------
+  const pushOk = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && window.isSecureContext;
+  let swReg = null, pushSub = null;
+  function showNotif() {
+    const b = $('#notifBtn'); if (!b) return;
+    const blocked = pushOk && Notification.permission === 'denied';
+    b.textContent = t(pushSub ? 'notif_on' : blocked ? 'notif_blocked' : 'notif_off');
+    b.setAttribute('aria-pressed', String(!!pushSub));
+  }
+  const keyBytes = k => { const b = atob((k + '='.repeat((4 - k.length % 4) % 4)).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(b, c => c.charCodeAt(0)); };
+  async function setupPush() {
+    if (!pushOk) return;
+    try {
+      swReg = await navigator.serviceWorker.register('/sw.js');
+      pushSub = await swReg.pushManager.getSubscription();
+      if (pushSub && Notification.permission === 'granted') await post('/api/push/subscribe', { sub: pushSub.toJSON() }); // keep the server in step with this phone
+      else if (pushSub) pushSub = null;
+    } catch { /* notifications stay off */ }
+    showNotif();
+  }
+  $('#notifBtn').addEventListener('click', async () => {
+    if (!pushOk) return toast(t('notif_unsupported'), 6000);
+    const b = $('#notifBtn'); b.disabled = true;
+    try {
+      if (pushSub) {
+        const ep = pushSub.endpoint; await pushSub.unsubscribe().catch(() => {}); pushSub = null;
+        await post('/api/push/unsubscribe', { endpoint: ep }).catch(() => {});
+      } else {
+        if (Notification.permission === 'denied' || (await Notification.requestPermission()) !== 'granted') { toast(t('notif_blocked_help'), 7000); return; }
+        swReg = swReg || await navigator.serviceWorker.register('/sw.js');
+        await navigator.serviceWorker.ready;
+        const { key } = await api('/api/push/key');
+        pushSub = await swReg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(key) });
+        await post('/api/push/subscribe', { sub: pushSub.toJSON() });
+      }
+    } catch (e) { toast(errText(e.code || 'server')); }
+    finally { b.disabled = false; showNotif(); }
+  });
+  // tapping a notification opens that chat
+  if (pushOk) navigator.serviceWorker.addEventListener('message', ev => { if (me && ev.data && typeof ev.data.open === 'string') openConv(ev.data.open, true); });
+  // tell the server whether this page is on screen, so it only notifies when you are not looking
+  const sendVis = () => send({ t: 'vis', v: !document.hidden });
+  document.addEventListener('visibilitychange', sendVis);
+  addEventListener('pagehide', () => send({ t: 'vis', v: false }));
+
   function send(obj) {
     if (ws && ws.readyState === 1) { ws.send(JSON.stringify(obj)); return true; }
     return false;
@@ -460,6 +511,7 @@
     if (!wantSocket) return;
     ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws');
     ws.onopen = async () => {
+      sendVis();
       const again = retry > 0; retry = 0; $('#toast').hidden = true;
       if (again) { try { await refresh(); if (current) { await loadMsgs(current, false); renderMsgs(false); markRead(); } } catch { /* next reconnect will retry */ } }
     };
@@ -590,6 +642,9 @@
     if (!narrow()) openConv('lobby', false);
     if (me.lang) setUiLang(me.lang); // the app follows the language saved on the account
     if (!me.lang) openLangs(); // accounts made before language choice existed
+    setupPush();
+    const want = new URLSearchParams(location.search).get('c'); // opened from a notification
+    if (want) { history.replaceState(null, '', '/'); openConv(want, true); }
   }
   applyLang();
   boot();

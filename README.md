@@ -6,6 +6,9 @@ so nobody needs an app store, a phone number, or a VPN.
 - Invite-only accounts (name + password)
 - Lobby for everyone, plus one-to-one chats
 - Photos, typing and "here now" indicators, unread counts
+- Phone notifications for new messages (tap **Notifications** in the chat list). They arrive only
+  when Qiao is not on screen. Works in Chrome/Edge/Firefox on Android and in the installed
+  Home Screen app on iPhone; browsers in mainland China usually cannot receive them
 - Translation: each person says which languages they read (English, 中文, हिन्दी, Tiếng Việt,
   日本語, 한국어). Messages in any other language are translated for them, automatically or
   with a Translate button

@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { WebSocketServer } = require('ws');
+const webpush = require('web-push');
 
 const PORT = Number(process.env.PORT) || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
@@ -112,6 +113,59 @@ async function translateText(text, target) {
   return { text: d.responseData.translatedText, src };
 }
 const trPending = new Map();
+// Translate message m for reader u. Resolves to the translation, or null when u can read it as is.
+function translateFor(u, m, askedLang) {
+  const to = u.lang || (Object.prototype.hasOwnProperty.call(TR_LANGS, askedLang) ? askedLang : null);
+  if (!to) return Promise.reject(new Error('no language'));
+  const target = TR_LANGS[to], reads = u.lang ? u.reads || [to] : [to];
+  if (!m.text || !detectLangs(m.text).some(l => !reads.includes(l))) return Promise.resolve(null);
+  const key = m.id + '|' + to;
+  if (key in tr) return Promise.resolve(tr[key]);
+  let job = trPending.get(key);
+  if (!job) {
+    job = translateText(m.text, target).then(r => {
+      const same = r.src.slice(0, 2).toLowerCase() === target.slice(0, 2) || r.text.trim().toLowerCase() === m.text.trim().toLowerCase();
+      tr[key] = same ? null : r.text.slice(0, 8000); saveTr();
+      return tr[key];
+    }).finally(() => trPending.delete(key));
+    trPending.set(key, job);
+  }
+  return job;
+}
+
+// ---------- phone notifications (Web Push) ----------
+// Keys are made once and kept in the data folder. The message is encrypted for the phone,
+// so the browser's push service (Google for Chrome) only passes it along.
+const VAPID_FILE = path.join(DATA, 'vapid.json');
+let vapid;
+try { vapid = JSON.parse(fs.readFileSync(VAPID_FILE, 'utf8')); } catch { vapid = webpush.generateVAPIDKeys(); fs.writeFileSync(VAPID_FILE, JSON.stringify(vapid), { mode: 0o600 }); }
+webpush.setVapidDetails(process.env.PUSH_CONTACT || 'mailto:admin@qiao.invalid', vapid.publicKey, vapid.privateKey);
+const PUSH_WORDS = { photo: { en: 'Photo', zh: '图片', hi: 'फ़ोटो', vi: 'Ảnh', ja: '写真', ko: '사진' }, lobby: { en: 'Lobby', zh: '大厅', hi: 'लॉबी', vi: 'Sảnh chung', ja: 'ロビー', ko: '로비' } };
+function validSub(x) {
+  if (!x || typeof x !== 'object' || typeof x.endpoint !== 'string' || x.endpoint.length > 1000 || !x.keys || typeof x.keys !== 'object') return null;
+  let u; try { u = new URL(x.endpoint); } catch { return null; }
+  if (u.protocol !== 'https:') return null;
+  const { p256dh, auth } = x.keys;
+  if (typeof p256dh !== 'string' || typeof auth !== 'string' || !/^[\w-]{20,200}$/.test(p256dh) || !/^[\w-]{8,100}$/.test(auth)) return null;
+  return { endpoint: x.endpoint, keys: { p256dh, auth } };
+}
+async function pushTo(u, m) {
+  if (!u.push || !u.push.length) return;
+  const lang = u.lang || 'en';
+  const sender = db.users[m.from];
+  const title = (sender ? sender.name : '?') + (m.conv === 'lobby' ? ' · ' + PUSH_WORDS.lobby[lang] : '');
+  let body = m.text || PUSH_WORDS.photo[lang];
+  if (m.text) { try { const t = await Promise.race([translateFor(u, m), new Promise(r => setTimeout(() => r(null), 4000))]); if (t) body = t; } catch { /* send the original */ } }
+  const payload = JSON.stringify({ title, body: [...body].slice(0, 180).join(''), conv: m.conv });
+  for (const sub of [...u.push]) {
+    webpush.sendNotification(sub, payload, { TTL: 86400, urgency: 'high', topic: m.conv.replace(/[^\w-]/g, '').slice(-32) }).catch(e => {
+      if (e && (e.statusCode === 404 || e.statusCode === 410)) { u.push = (u.push || []).filter(x => x.endpoint !== sub.endpoint); save(); } // phone unsubscribed
+      else console.error('push failed', e && e.statusCode);
+    });
+  }
+}
+// someone is "looking" when one of their open Qiao pages is visible on screen
+function looking(uid) { for (const ws of sockets.get(uid) || []) if (ws.visible) return true; return false; }
 
 // ---------- helpers ----------
 const rid = (n = 9) => crypto.randomBytes(n).toString('base64url');
@@ -335,6 +389,7 @@ async function route(req, res) {
     if (!target) fail(404, 'not_found');
     if (target.id === me.id || target.admin) fail(400, 'bad_request');
     const signOut = () => {
+      target.push = []; // their phones stop getting notifications too
       for (const k of Object.keys(db.sessions)) if (db.sessions[k].uid === target.id) delete db.sessions[k];
       for (const ws of [...(sockets.get(target.id) || [])]) ws.close();
     };
@@ -374,26 +429,27 @@ async function route(req, res) {
 
   if (p === '/api/translate' && req.method === 'POST') {
     const b = await readJson(req);
-    // translate into the reader's own language, skipping languages they said they can read
-    const to = me.lang || (Object.prototype.hasOwnProperty.call(TR_LANGS, b.to) ? b.to : null);
-    if (!to || !members(me.id, b.conv)) fail(400, 'bad_request');
-    const target = TR_LANGS[to], reads = me.lang ? me.reads || [to] : [to];
+    if (!members(me.id, b.conv)) fail(400, 'bad_request');
+    if (!me.lang && !Object.prototype.hasOwnProperty.call(TR_LANGS, b.to)) fail(400, 'bad_request');
     const m = (convs.get(b.conv) || []).find(x => x.id === b.id);
     if (!m) fail(404, 'not_found');
-    const key = m.id + '|' + to;
-    if (!m.text || !detectLangs(m.text).some(l => !reads.includes(l))) return json(res, 200, { text: null });
-    if (key in tr) return json(res, 200, { text: tr[key] });
-    if (limited('tr:' + me.id, 120, 60000)) fail(429, 'slow_down');
-    let job = trPending.get(key);
-    if (!job) {
-      job = translateText(m.text, target).then(r => {
-        const same = r.src.slice(0, 2).toLowerCase() === target.slice(0, 2) || r.text.trim().toLowerCase() === m.text.trim().toLowerCase();
-        tr[key] = same ? null : r.text.slice(0, 8000); saveTr();
-        return tr[key];
-      }).finally(() => trPending.delete(key));
-      trPending.set(key, job);
-    }
+    const to = me.lang || b.to;
+    if (!((m.id + '|' + to) in tr) && limited('tr:' + me.id, 120, 60000)) fail(429, 'slow_down');
+    const job = translateFor(me, m, b.to);
     try { return json(res, 200, { text: await job }); } catch { fail(502, 'translate_failed'); }
+  }
+
+  if (p === '/api/push/key' && req.method === 'GET') return json(res, 200, { key: vapid.publicKey });
+  if (p === '/api/push/subscribe' && req.method === 'POST') {
+    const sub = validSub((await readJson(req)).sub); if (!sub) fail(400, 'bad_request');
+    me.push = (me.push || []).filter(x => x.endpoint !== sub.endpoint);
+    me.push.push(sub); me.push = me.push.slice(-5); save(); // up to 5 phones or browsers
+    return json(res, 200, { ok: true });
+  }
+  if (p === '/api/push/unsubscribe' && req.method === 'POST') {
+    const b = await readJson(req);
+    me.push = (me.push || []).filter(x => x.endpoint !== b.endpoint); save();
+    return json(res, 200, { ok: true });
   }
 
   if (p === '/api/upload' && req.method === 'POST') {
@@ -437,7 +493,7 @@ server.on('upgrade', (req, socket, head) => {
   const user = url && url.pathname === '/ws' && sameOrigin(req) ? authed(req) : null;
   if (!user) { socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n'); socket.destroy(); return; }
   wss.handleUpgrade(req, socket, head, ws => {
-    ws.uid = user.id; ws.alive = true;
+    ws.uid = user.id; ws.alive = true; ws.visible = true;
     let set = sockets.get(user.id);
     const first = !set;
     if (first) sockets.set(user.id, set = new Set());
@@ -459,6 +515,7 @@ setInterval(() => {
 
 function onMessage(ws, d) {
   const me = db.users[ws.uid]; if (!me || !d || typeof d !== 'object') return;
+  if (d.t === 'vis') { ws.visible = d.v === true; return; }
   const who = members(me.id, d.conv); if (!who) return;
 
   if (d.t === 'send') {
@@ -472,6 +529,7 @@ function onMessage(ws, d) {
     fs.appendFile(MSG_FILE, JSON.stringify(m) + '\n', err => { if (err) console.error('could not save message', err); });
     (me.read = me.read || {})[d.conv] = m.ts; save();
     sendTo(who, { t: 'msg', m, cid: typeof d.cid === 'string' ? d.cid.slice(0, 40) : undefined });
+    for (const uid of who) if (uid !== me.id && db.users[uid] && !looking(uid)) pushTo(db.users[uid], m).catch(() => {});
   } else if (d.t === 'typing') {
     if (!limited('ty:' + me.id, 10, 10000)) sendTo(who, { t: 'typing', conv: d.conv, from: me.id }, ws);
   } else if (d.t === 'read') {

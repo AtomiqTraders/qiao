@@ -3,6 +3,9 @@
    Any key missing here falls back to English. */
 window.QIAO_I18N = {
   hi: {
+    notif_on: '🔔 सूचनाएँ: चालू', notif_off: '🔕 सूचनाएँ: बंद', notif_blocked: '🔕 सूचनाएँ: ब्लॉक',
+    notif_unsupported: 'यह ब्राउज़र सूचनाएँ नहीं दिखा सकता। iPhone पर पहले Qiao को होम स्क्रीन पर जोड़ें।',
+    notif_blocked_help: 'सूचनाएँ ब्लॉक हैं। ब्राउज़र की सेटिंग में इस साइट के लिए अनुमति दें, फिर दोबारा कोशिश करें।',
     tagline: 'दूर बसे दोस्तों के लिए एक छोटा सा पुल।',
     tab_login: 'लॉग इन', tab_join: 'इनवाइट से जुड़ें',
     f_invite: 'इनवाइट कोड', f_name: 'नाम', f_password: 'पासवर्ड',
@@ -40,6 +43,9 @@ window.QIAO_I18N = {
     err_server: 'सर्वर में कुछ गड़बड़ हुई। फिर कोशिश करें।'
   },
   vi: {
+    notif_on: '🔔 Thông báo: bật', notif_off: '🔕 Thông báo: tắt', notif_blocked: '🔕 Thông báo: bị chặn',
+    notif_unsupported: 'Trình duyệt này không hiển thị được thông báo. Trên iPhone, hãy thêm Qiao vào Màn hình chính trước.',
+    notif_blocked_help: 'Thông báo đang bị chặn. Hãy cho phép trang này trong cài đặt trình duyệt rồi thử lại.',
     tagline: 'Cây cầu nhỏ cho những người bạn ở xa.',
     tab_login: 'Đăng nhập', tab_join: 'Tham gia bằng lời mời',
     f_invite: 'Mã mời', f_name: 'Tên', f_password: 'Mật khẩu',
@@ -77,6 +83,9 @@ window.QIAO_I18N = {
     err_server: 'Máy chủ gặp lỗi. Hãy thử lại.'
   },
   ja: {
+    notif_on: '🔔 通知：オン', notif_off: '🔕 通知：オフ', notif_blocked: '🔕 通知：ブロック中',
+    notif_unsupported: 'このブラウザでは通知を表示できません。iPhone では先に Qiao をホーム画面に追加してください。',
+    notif_blocked_help: '通知がブロックされています。ブラウザの設定でこのサイトの通知を許可してから、もう一度お試しください。',
     tagline: '遠くの友だちとつながる小さな橋。',
     tab_login: 'ログイン', tab_join: '招待コードで参加',
     f_invite: '招待コード', f_name: '名前', f_password: 'パスワード',
@@ -114,6 +123,9 @@ window.QIAO_I18N = {
     err_server: 'サーバーで問題が起きました。もう一度お試しください。'
   },
   ko: {
+    notif_on: '🔔 알림: 켜짐', notif_off: '🔕 알림: 꺼짐', notif_blocked: '🔕 알림: 차단됨',
+    notif_unsupported: '이 브라우저는 알림을 표시할 수 없습니다. iPhone에서는 먼저 Qiao를 홈 화면에 추가하세요.',
+    notif_blocked_help: '알림이 차단되어 있습니다. 브라우저 설정에서 이 사이트의 알림을 허용한 뒤 다시 시도해 주세요.',
     tagline: '멀리 있는 친구를 잇는 작은 다리.',
     tab_login: '로그인', tab_join: '초대 코드로 참여',
     f_invite: '초대 코드', f_name: '이름', f_password: '비밀번호',

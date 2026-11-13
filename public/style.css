@@ -201,3 +201,6 @@ a.ghost { padding: 8px 12px; border-radius: 999px; text-decoration: none; font-s
 .pick:hover { background: var(--raise); }
 .pick.on { background: var(--candle); color: var(--candle-ink); font-weight: 600; }
 [data-lang] { white-space: nowrap; }
+
+#notifBtn { font-size: .9rem; }
+#notifBtn[aria-pressed="true"] { color: var(--ink); }
