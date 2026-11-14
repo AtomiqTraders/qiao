@@ -7,6 +7,8 @@ so nobody needs an app store, a phone number, or a VPN.
 - Lobby for everyone, plus one-to-one chats
 - Photos, typing and "here now" indicators, unread counts
 - "Sent" and "Seen" under your latest message ("Seen by …" in the lobby)
+- Announcements channel: only the admin posts. Every entry in `updates.json` is posted there
+  automatically (in each reader's language) the first time the server starts with it, and pings everyone
 - Emoji reactions (hold a message, or double-tap for ❤️)
 - Tic-tac-toe and rock paper scissors inside one-to-one chats (game button next to the photo button)
 - Swipe a message to reply to it; hold a message to copy, edit or delete it (right-click on a computer)

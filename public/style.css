@@ -273,3 +273,10 @@ a.ghost { padding: 8px 12px; border-radius: 999px; text-decoration: none; font-s
 .game-choice { display: grid; gap: 8px; justify-items: center; padding: 18px 10px; border-radius: 18px; background: var(--bg); border: 1px solid var(--line); color: var(--ink); text-align: center; }
 .game-choice:hover { border-color: var(--candle); }
 .gc-art { font-size: 1.75rem; }
+
+/* ----- announcements ----- */
+.news-note { text-align: center; color: var(--soft); font-size: .875rem; padding: 14px 16px calc(14px + env(safe-area-inset-bottom)); background: var(--panel); border-top: 1px solid var(--line); }
+#composer[hidden] { display: none; }
+.bubble.ann { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; }
+.bubble.ann .body::first-line { font-weight: 700; }
+.msg:has(.bubble.ann) { max-width: min(92%, 560px); }

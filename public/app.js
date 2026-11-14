@@ -20,6 +20,7 @@
       invite_btn: 'Invite a friend', logout: 'Log out',
       pick_chat: 'Pick a conversation to start talking.',
       lobby: 'Lobby', lobby_sub: 'Everyone here', people: 'People',
+      news: 'Announcements', news_sub: 'Updates and news', news_readonly: 'Only the admin can post here',
       nobody: 'Nobody else is here yet. Invite a friend.',
       online: 'Here now', offline: 'Away',
       older: 'Show earlier messages', send: 'Send', send_photo: 'Send a photo',
@@ -66,6 +67,7 @@
       invite_btn: '邀请朋友', logout: '退出登录',
       pick_chat: '选择一个对话开始聊天。',
       lobby: '大厅', lobby_sub: '所有人', people: '朋友',
+      news: '公告', news_sub: '更新和消息', news_readonly: '只有管理员可以在这里发言',
       nobody: '这里还没有其他人，邀请一位朋友吧。',
       online: '在线', offline: '离开',
       older: '查看更早的消息', send: '发送', send_photo: '发送图片',
@@ -123,7 +125,7 @@
   const typers = {};  // conv -> { uid: timeout }
   const narrow = () => matchMedia('(max-width: 760px)').matches;
   const dmId = id => 'dm:' + [me.id, id].sort().join(':');
-  const otherOf = conv => conv === 'lobby' ? null : users.get(conv.split(':').slice(1).find(id => id !== me.id));
+  const otherOf = conv => !conv.startsWith('dm:') ? null : users.get(conv.split(':').slice(1).find(id => id !== me.id));
 
   async function api(path, opts) {
     let res;
@@ -274,11 +276,12 @@
     const who = m.from === me.id ? t('you') + ': ' : (m.conv === 'lobby' && users.get(m.from) ? users.get(m.from).name + ': ' : '');
     return who + msgLabel(m);
   }
-  function msgLabel(m) { return m.text || (m.game ? '🎮 ' + t(m.game.kind || m.game) : t('photo')); }
+  const annText = m => m.ann ? m.ann[lang] || m.ann.en || '' : '';
+  function msgLabel(m) { return m.text || annText(m) || (m.game ? '🎮 ' + t(m.game.kind || m.game) : t('photo')); }
   function roomRow(conv, title, sub, user) {
     const b = el('button', 'room'); b.type = 'button';
     if (conv === current) b.setAttribute('aria-current', 'true');
-    const av = el('span', 'avatar' + (user ? '' : ' lobby'), user ? [...user.name][0].toUpperCase() : '桥');
+    const av = el('span', 'avatar' + (user ? '' : ' lobby'), user ? [...user.name][0].toUpperCase() : conv === 'news' ? '📣' : '桥');
     if (user) { av.style.background = user.color; av.append(el('span', 'flame' + (online.has(user.id) ? ' lit' : ''))); }
     const text = el('span', 'text');
     text.append(el('div', 'who', title), el('div', 'last', sub));
@@ -290,6 +293,7 @@
   }
   function renderSide() {
     const box = $('#rooms'); box.textContent = '';
+    box.append(roomRow('news', t('news'), preview(convs.news && convs.news.last) || t('news_sub'), null));
     box.append(roomRow('lobby', t('lobby'), preview(convs.lobby && convs.lobby.last) || t('lobby_sub'), null));
     box.append(el('div', 'group-label', t('people')));
     const others = [...users.values()].filter(u => u.id !== me.id);
@@ -311,10 +315,12 @@
   for (const b of document.querySelectorAll('#gameDlg [data-game]')) b.addEventListener('click', () => { $('#gameDlg').close(); startGame(b.dataset.game); });
   $('#gameDlg').addEventListener('click', ev => { if (ev.target === $('#gameDlg')) $('#gameDlg').close(); });
   function renderHead() {
-    $('#gameBtn').hidden = current === 'lobby';
-    const u = otherOf(current);
-    $('#chatTitle').textContent = u ? u.name : t('lobby');
-    $('#chatSub').textContent = u ? t(online.has(u.id) ? 'online' : 'offline') : t('lobby_sub');
+    $('#gameBtn').hidden = !current.startsWith('dm:');
+    const readOnly = current === 'news' && !me.admin; // only the admin posts announcements
+    $('#composer').hidden = readOnly; $('#newsNote').hidden = !readOnly;
+    const u = otherOf(current), group = current === 'news' ? 'news' : 'lobby';
+    $('#chatTitle').textContent = u ? u.name : t(group);
+    $('#chatSub').textContent = u ? t(online.has(u.id) ? 'online' : 'offline') : t(group + '_sub');
   }
   function dayLabel(ts) {
     const d = new Date(ts), now = new Date();
@@ -334,7 +340,7 @@
     if (i < text.length) node.append(text.slice(i));
   }
   const sameRun = (a, b) => a && b && a.from === b.from && Math.abs(b.ts - a.ts) <= 5 * 60000 && dayLabel(a.ts) === dayLabel(b.ts);
-  const nameOf = id => id === me.id ? t('you') : (users.get(id) ? users.get(id).name : t('removed_user'));
+  const nameOf = id => id === me.id ? t('you') : id === 'qiao' ? 'Qiao 桥' : (users.get(id) ? users.get(id).name : t('removed_user'));
   function quoteNode(re) {
     const q = el('button', 'quote'); q.type = 'button';
     if (re.gone) q.append(el('span', 'qtext', t('msg_deleted')));
@@ -347,8 +353,8 @@
     const wrap = el('div', 'msg' + (mine ? ' mine' : '') + (sameRun(prev, m) ? ' cont' : ''));
     wrap.dataset.id = m.id;
     const u = users.get(m.from);
-    if (current === 'lobby' && !mine && !sameRun(prev, m)) {
-      const f = el('div', 'from', u ? u.name : t('removed_user')); if (u) f.style.color = u.color; wrap.append(f);
+    if (!current.startsWith('dm:') && !mine && !sameRun(prev, m)) {
+      const f = el('div', 'from', nameOf(m.from)); if (u) f.style.color = u.color; else if (m.from === 'qiao') f.style.color = 'var(--candle)'; wrap.append(f);
     }
     const b = el('div', 'bubble');
     if (m.re) b.append(quoteNode(m.re));
@@ -359,6 +365,7 @@
       b.append(img);
     }
     if (m.text) { const s = el('span', 'body'); fillText(s, m.text); b.append(s); addTranslation(m, b); }
+    if (m.ann) { b.classList.add('ann'); const s = el('span', 'body'); fillText(s, annText(m)); b.append(s); }
     if (m.game) { b.classList.add('game-b'); b.append(gameNode(m)); }
     const hint = el('span', 'reply-hint'); hint.innerHTML = ICON.reply; hint.setAttribute('aria-hidden', 'true');
     wrap.append(hint, b);
@@ -516,15 +523,16 @@
       row.append(b);
     }
     box.append(row);
-    act(ICON.reply, t('reply'), () => { dlg.close(); startReply(m); });
-    if (m.text) act(ICON.copy, t('copy_text'), async () => {
+    if (canPost()) act(ICON.reply, t('reply'), () => { dlg.close(); startReply(m); });
+    const copyText = m.text || annText(m);
+    if (copyText) act(ICON.copy, t('copy_text'), async () => {
       dlg.close();
-      try { await navigator.clipboard.writeText(m.text); }
-      catch { const ta = el('textarea'); ta.value = m.text; document.body.append(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
+      try { await navigator.clipboard.writeText(copyText); }
+      catch { const ta = el('textarea'); ta.value = copyText; document.body.append(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
       toast(t('copied_text'));
     });
     if (mine && m.text) act(ICON.edit, t('edit'), () => { dlg.close(); startEdit(m); });
-    if (mine || (me.admin && m.conv === 'lobby')) act(ICON.del, t('delete'), (b, lab) => {
+    if (mine || (me.admin && (m.conv === 'lobby' || m.conv === 'news'))) act(ICON.del, t('delete'), (b, lab) => {
       if (!b.classList.contains('armed')) { b.classList.add('armed'); lab.textContent = t('delete_confirm'); return; }
       dlg.close();
       if (!send({ t: 'del', conv: m.conv, id: m.id })) toast(t('not_sent'));
@@ -544,7 +552,9 @@
     $('#ctxLabel').textContent = editing ? t('editing') : (replyTo.from === me.id ? t('replying_self') : t('replying_to', nameOf(replyTo.from)));
     $('#ctxSnip').textContent = msgLabel(editing || replyTo);
   }
-  function startReply(m) { if (editing) input.value = ''; editing = null; replyTo = m; showCtx(); grow(); input.focus(); }
+  const canPost = () => current !== 'news' || me.admin;
+  function startReply(m) {
+    if (!canPost()) return; if (editing) input.value = ''; editing = null; replyTo = m; showCtx(); grow(); input.focus(); }
   function startEdit(m) { replyTo = null; editing = m; input.value = m.text; showCtx(); grow(); input.focus(); input.setSelectionRange(input.value.length, input.value.length); }
   function cancelCtx() { if (editing) input.value = ''; replyTo = null; editing = null; showCtx(); grow(); }
   $('#ctxClose').addEventListener('click', () => { cancelCtx(); input.focus(); });
@@ -633,7 +643,7 @@
       const seen = c.seen || {};
       const who = Object.keys(seen).filter(uid => users.has(uid) && seen[uid] >= last.ts);
       let text;
-      if (current !== 'lobby') text = t(who.length ? 'seen' : 'sent');
+      if (current.startsWith('dm:')) text = t(who.length ? 'seen' : 'sent');
       else if (!who.length) text = t('sent');
       else if (who.length === Object.keys(seen).filter(uid => users.has(uid)).length) text = t('seen_all');
       else {

@@ -1,0 +1,38 @@
+[
+  {
+    "id": "2026-11-14-replies",
+    "en": "✨ Reply, edit and delete\nSwipe a message toward the middle to reply to it. Hold a message to copy it, or to edit or delete your own.",
+    "zh": "✨ 回复、编辑和删除\n把消息往中间滑一下就能回复。长按消息可以复制，也可以编辑或删除自己的消息。",
+    "hi": "✨ जवाब, बदलाव और हटाना\nकिसी संदेश को बीच की ओर खिसकाकर उसका जवाब दें। संदेश को दबाकर रखें और उसे कॉपी करें, या अपने संदेश बदलें या हटाएँ।",
+    "vi": "✨ Trả lời, sửa và xóa\nVuốt tin nhắn vào giữa để trả lời. Nhấn giữ tin nhắn để sao chép, hoặc sửa và xóa tin nhắn của bạn.",
+    "ja": "✨ 返信・編集・削除\nメッセージを中央へスワイプすると返信できます。長押しでコピー、自分のメッセージは編集や削除もできます。",
+    "ko": "✨ 답장, 수정, 삭제\n메시지를 가운데 쪽으로 밀면 답장할 수 있어요. 메시지를 길게 누르면 복사할 수 있고, 내 메시지는 수정하거나 삭제할 수 있어요."
+  },
+  {
+    "id": "2026-11-15-seen",
+    "en": "👀 Seen\nUnder your latest message you'll see Sent, and Seen once it has been read.",
+    "zh": "👀 已读\n你最新的消息下面会显示“已发送”，对方看过之后会变成“已读”。",
+    "hi": "👀 देखा गया\nआपके सबसे नए संदेश के नीचे “भेजा गया” दिखेगा, और पढ़ लिए जाने पर “देखा गया”।",
+    "vi": "👀 Đã xem\nDưới tin nhắn mới nhất của bạn sẽ hiện “Đã gửi”, và “Đã xem” khi người kia đã đọc.",
+    "ja": "👀 既読\n最新のメッセージの下に「送信済み」、読まれると「既読」と表示されます。",
+    "ko": "👀 읽음\n가장 최근 메시지 아래에 ‘전송됨’이 보이고, 상대가 읽으면 ‘읽음’으로 바뀌어요."
+  },
+  {
+    "id": "2026-11-15-fun",
+    "en": "🎮 Reactions and games\nDouble-tap a message for ❤️, or hold it for more emojis. In a one-to-one chat, tap the game button to play tic-tac-toe or rock paper scissors together.",
+    "zh": "🎮 表情回应和小游戏\n双击消息可以点❤️，长按可以选更多表情。在私聊里点游戏按钮，就能一起玩井字棋或石头剪刀布。",
+    "hi": "🎮 रिएक्शन और गेम\nकिसी संदेश पर दो बार टैप करके ❤️ दें, या ज़्यादा इमोजी के लिए दबाकर रखें। किसी एक दोस्त वाली चैट में गेम बटन दबाकर साथ में टिक-टैक-टो या पत्थर कागज़ कैंची खेलें।",
+    "vi": "🎮 Bày tỏ cảm xúc và trò chơi\nChạm hai lần vào tin nhắn để thả ❤️, hoặc nhấn giữ để chọn biểu tượng khác. Trong trò chuyện riêng, bấm nút trò chơi để cùng chơi cờ ca-rô hoặc oẳn tù tì.",
+    "ja": "🎮 リアクションとゲーム\nメッセージをダブルタップで❤️、長押しでほかの絵文字も選べます。1対1のチャットではゲームボタンから三目並べやじゃんけんで遊べます。",
+    "ko": "🎮 반응과 게임\n메시지를 두 번 탭하면 ❤️, 길게 누르면 다른 이모지도 고를 수 있어요. 1:1 채팅에서 게임 버튼을 누르면 틱택토나 가위바위보를 함께 할 수 있어요."
+  },
+  {
+    "id": "2026-11-15-news",
+    "en": "📣 Announcements\nThis channel is new. Every Qiao update is posted here automatically, so you always know what changed.",
+    "zh": "📣 公告频道\n这是新加的频道。Qiao 每次更新都会自动发在这里，你随时都能知道有什么变化。",
+    "hi": "📣 घोषणाएँ\nयह चैनल नया है। Qiao का हर अपडेट यहाँ अपने आप पोस्ट होगा, ताकि आपको हमेशा पता रहे कि क्या बदला।",
+    "vi": "📣 Thông báo\nĐây là kênh mới. Mỗi bản cập nhật của Qiao sẽ tự động được đăng ở đây để bạn luôn biết có gì thay đổi.",
+    "ja": "📣 お知らせ\n新しいチャンネルです。Qiao のアップデートはここに自動で投稿されるので、何が変わったかいつでも分かります。",
+    "ko": "📣 공지\n새로 생긴 채널이에요. Qiao가 업데이트될 때마다 여기에 자동으로 올라오니, 무엇이 바뀌었는지 언제든 알 수 있어요."
+  }
+]

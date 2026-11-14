@@ -3,6 +3,7 @@
    Any key missing here falls back to English. */
 window.QIAO_I18N = {
   hi: {
+    news: 'घोषणाएँ', news_sub: 'अपडेट और खबरें', news_readonly: 'यहाँ सिर्फ़ एडमिन पोस्ट कर सकता है',
     game_btn: 'गेम खेलें', ttt: 'टिक-टैक-टो', rps: 'पत्थर कागज़ कैंची', your_turn: 'आपकी बारी', their_turn: '{0} की बारी', you_won: 'आप जीत गए!', they_won: '{0} जीत गए', draw: 'बराबरी', play_again: 'फिर से खेलें', pick_one: 'एक चुनें', waiting_pick: '{0} के चुनने का इंतज़ार', they_picked: '{0} ने चुन लिया। अब आपकी बारी',
     sent: 'भेजा गया', seen: 'देखा गया', seen_by: '{0} ने देखा', seen_all: 'सबने देखा',
     replying_self: 'अपने संदेश को जवाब',
@@ -47,6 +48,7 @@ window.QIAO_I18N = {
     err_server: 'सर्वर में कुछ गड़बड़ हुई। फिर कोशिश करें।'
   },
   vi: {
+    news: 'Thông báo', news_sub: 'Cập nhật và tin tức', news_readonly: 'Chỉ quản trị viên mới đăng được ở đây',
     game_btn: 'Chơi trò chơi', ttt: 'Cờ ca-rô', rps: 'Oẳn tù tì', your_turn: 'Đến lượt bạn', their_turn: 'Đến lượt {0}', you_won: 'Bạn thắng!', they_won: '{0} thắng', draw: 'Hòa', play_again: 'Chơi lại', pick_one: 'Chọn một', waiting_pick: 'Đang chờ {0} chọn', they_picked: '{0} đã chọn. Đến lượt bạn',
     sent: 'Đã gửi', seen: 'Đã xem', seen_by: '{0} đã xem', seen_all: 'Mọi người đã xem',
     replying_self: 'Đang trả lời chính bạn',
@@ -91,6 +93,7 @@ window.QIAO_I18N = {
     err_server: 'Máy chủ gặp lỗi. Hãy thử lại.'
   },
   ja: {
+    news: 'お知らせ', news_sub: 'アップデートとお知らせ', news_readonly: 'ここに投稿できるのは管理者だけです',
     game_btn: 'ゲームで遊ぶ', ttt: '三目並べ', rps: 'じゃんけん', your_turn: 'あなたの番です', their_turn: '{0} さんの番です', you_won: 'あなたの勝ち！', they_won: '{0} さんの勝ち', draw: '引き分け', play_again: 'もう一回', pick_one: '一つ選んでください', waiting_pick: '{0} さんが選ぶのを待っています', they_picked: '{0} さんは選びました。あなたの番です',
     sent: '送信済み', seen: '既読', seen_by: '{0} が既読', seen_all: '全員が既読',
     replying_self: '自分のメッセージに返信',
@@ -135,6 +138,7 @@ window.QIAO_I18N = {
     err_server: 'サーバーで問題が起きました。もう一度お試しください。'
   },
   ko: {
+    news: '공지', news_sub: '업데이트와 소식', news_readonly: '관리자만 글을 쓸 수 있어요',
     game_btn: '게임하기', ttt: '틱택토', rps: '가위바위보', your_turn: '내 차례', their_turn: '{0} 님 차례', you_won: '내가 이겼어요!', they_won: '{0} 님이 이겼어요', draw: '무승부', play_again: '다시 하기', pick_one: '하나 고르세요', waiting_pick: '{0} 님이 고르기를 기다리는 중', they_picked: '{0} 님이 골랐어요. 내 차례',
     sent: '전송됨', seen: '읽음', seen_by: '{0} 님이 읽음', seen_all: '모두 읽음',
     replying_self: '내 메시지에 답장',

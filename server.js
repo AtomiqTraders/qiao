@@ -54,7 +54,7 @@ if (fs.existsSync(MSG_FILE)) {
 function list(conv) { let a = convs.get(conv); if (!a) convs.set(conv, a = []); return a; }
 // Edits and deletes are stored as extra lines in the same file and replayed in order on start.
 // A reply keeps a short copy of the message it answers (re), kept in step here.
-function snippet(m) { const r = { id: m.id, from: m.from, text: [...(m.text || '')].slice(0, 140).join(''), img: !!m.img }; if (m.game) r.game = m.game.kind; return r; }
+function snippet(m) { const r = { id: m.id, from: m.from, text: [...(m.text || (m.ann && m.ann.en) || '')].slice(0, 140).join(''), img: !!m.img }; if (m.game) r.game = m.game.kind; return r; }
 const REACTS = ['❤️', '😂', '😮', '😢', '😡', '👍'];
 // one reaction per person per message; e === null takes theirs away
 function setReaction(m, uid, e) {
@@ -162,7 +162,7 @@ const VAPID_FILE = path.join(DATA, 'vapid.json');
 let vapid;
 try { vapid = JSON.parse(fs.readFileSync(VAPID_FILE, 'utf8')); } catch { vapid = webpush.generateVAPIDKeys(); fs.writeFileSync(VAPID_FILE, JSON.stringify(vapid), { mode: 0o600 }); }
 webpush.setVapidDetails(process.env.PUSH_CONTACT || 'mailto:admin@qiao.invalid', vapid.publicKey, vapid.privateKey);
-const PUSH_WORDS = { game: { en: 'Wants to play', zh: '邀请你玩游戏', hi: 'खेलना चाहते हैं', vi: 'Muốn chơi cùng bạn', ja: 'ゲームに誘っています', ko: '게임을 하자고 해요' }, turn: { en: 'Your turn', zh: '轮到你了', hi: 'आपकी बारी', vi: 'Đến lượt bạn', ja: 'あなたの番です', ko: '내 차례' }, photo: { en: 'Photo', zh: '图片', hi: 'फ़ोटो', vi: 'Ảnh', ja: '写真', ko: '사진' }, lobby: { en: 'Lobby', zh: '大厅', hi: 'लॉबी', vi: 'Sảnh chung', ja: 'ロビー', ko: '로비' } };
+const PUSH_WORDS = { news: { en: 'Announcements', zh: '公告', hi: 'घोषणाएँ', vi: 'Thông báo', ja: 'お知らせ', ko: '공지' }, game: { en: 'Wants to play', zh: '邀请你玩游戏', hi: 'खेलना चाहते हैं', vi: 'Muốn chơi cùng bạn', ja: 'ゲームに誘っています', ko: '게임을 하자고 해요' }, turn: { en: 'Your turn', zh: '轮到你了', hi: 'आपकी बारी', vi: 'Đến lượt bạn', ja: 'あなたの番です', ko: '내 차례' }, photo: { en: 'Photo', zh: '图片', hi: 'फ़ोटो', vi: 'Ảnh', ja: '写真', ko: '사진' }, lobby: { en: 'Lobby', zh: '大厅', hi: 'लॉबी', vi: 'Sảnh chung', ja: 'ロビー', ko: '로비' } };
 function validSub(x) {
   if (!x || typeof x !== 'object' || typeof x.endpoint !== 'string' || x.endpoint.length > 1000 || !x.keys || typeof x.keys !== 'object') return null;
   let u; try { u = new URL(x.endpoint); } catch { return null; }
@@ -175,9 +175,9 @@ async function pushTo(u, m, override) {
   if (!u.push || !u.push.length) return;
   const lang = u.lang || 'en';
   const sender = db.users[m.from];
-  const title = (sender ? sender.name : '?') + (m.conv === 'lobby' ? ' · ' + PUSH_WORDS.lobby[lang] : '');
-  let body = override ? '🎮 ' + PUSH_WORDS[override][lang] : m.text || (m.game ? '🎮 ' + PUSH_WORDS.game[lang] : PUSH_WORDS.photo[lang]);
-  if (m.text && !override) { try { const t = await Promise.race([translateFor(u, m), new Promise(r => setTimeout(() => r(null), 4000))]); if (t) body = t; } catch { /* send the original */ } }
+  const title = (sender ? sender.name : 'Qiao 桥') + (m.conv === 'lobby' || m.conv === 'news' ? ' · ' + PUSH_WORDS[m.conv][lang] : '');
+  let body = m.ann ? m.ann[lang] || m.ann.en : override ? '🎮 ' + PUSH_WORDS[override][lang] : m.text || (m.game ? '🎮 ' + PUSH_WORDS.game[lang] : PUSH_WORDS.photo[lang]);
+  if (m.text && !override && !m.ann) { try { const t = await Promise.race([translateFor(u, m), new Promise(r => setTimeout(() => r(null), 4000))]); if (t) body = t; } catch { /* send the original */ } }
   const payload = JSON.stringify({ title, body: [...body].slice(0, 180).join(''), conv: m.conv });
   for (const sub of [...u.push]) {
     webpush.sendNotification(sub, payload, { TTL: 86400, urgency: 'high', topic: m.conv.replace(/[^\w-]/g, '').slice(-32) }).catch(e => {
@@ -270,7 +270,7 @@ function json(res, status, body) {
 
 // which conversations a user may touch, and who is in them
 function members(uid, conv) {
-  if (conv === 'lobby') return Object.keys(db.users);
+  if (conv === 'lobby' || conv === 'news') return Object.keys(db.users); // news = Announcements: everyone reads, the admin posts
   const m = /^dm:([\w-]+):([\w-]+)$/.exec(String(conv)); if (!m) return null;
   const [, a, b] = m;
   if (a === b || (a !== uid && b !== uid) || !db.users[a] || !db.users[b] || dmId(a, b) !== conv) return null;
@@ -407,7 +407,7 @@ async function route(req, res) {
   }
 
   if (p === '/api/me' && req.method === 'GET') {
-    const out = { lobby: summary(me, 'lobby') };
+    const out = { lobby: summary(me, 'lobby'), news: summary(me, 'news') };
     for (const id of Object.keys(db.users)) if (id !== me.id) { const c = dmId(me.id, id); out[c] = summary(me, c); }
     return json(res, 200, { me: own(me), users: Object.values(db.users).map(pub), online: [...sockets.keys()], convs: out });
   }
@@ -584,10 +584,11 @@ function onMessage(ws, d) {
   const who = members(me.id, d.conv); if (!who) return;
 
   if (d.t === 'send') {
+    if (d.conv === 'news' && !me.admin) return ws.send(JSON.stringify({ t: 'error', error: 'forbidden' }));
     if (limited('ms:' + me.id, 25, 10000)) return ws.send(JSON.stringify({ t: 'error', error: 'slow_down', cid: d.cid }));
     const text = typeof d.text === 'string' ? d.text.replace(/\u0000/g, '').trim().slice(0, 4000) : '';
     const img = typeof d.img === 'string' && UPLOAD_RE.test(d.img) && fs.existsSync(path.join(UP, d.img)) ? d.img : null;
-    const game = d.game && d.conv !== 'lobby' ? newGame(d.game, me.id, who.find(x => x !== me.id)) : null; // games are for one-to-one chats
+    const game = d.game && d.conv.startsWith('dm:') ? newGame(d.game, me.id, who.find(x => x !== me.id)) : null; // games are for one-to-one chats
     if (!text && !img && !game) return;
     const m = { id: rid(9), conv: d.conv, from: me.id, text: game ? '' : text, ts: Date.now() };
     if (img && !game) m.img = img;
@@ -602,7 +603,7 @@ function onMessage(ws, d) {
     if (limited('ed:' + me.id, 30, 60000)) return ws.send(JSON.stringify({ t: 'error', error: 'slow_down' }));
     const m = (convs.get(d.conv) || []).find(x => x.id === d.id); if (!m) return;
     // your own messages; the admin may also remove anything in the lobby
-    if (m.from !== me.id && !(d.t === 'del' && me.admin && d.conv === 'lobby')) return ws.send(JSON.stringify({ t: 'error', error: 'forbidden' }));
+    if (m.from !== me.id && !(d.t === 'del' && me.admin && (d.conv === 'lobby' || d.conv === 'news'))) return ws.send(JSON.stringify({ t: 'error', error: 'forbidden' }));
     let o;
     if (d.t === 'edit') {
       const text = typeof d.text === 'string' ? d.text.replace(/\u0000/g, '').trim().slice(0, 4000) : '';
@@ -663,4 +664,24 @@ function firstInvite() {
 }
 process.on('uncaughtException', e => { console.error('unexpected error', e); });
 for (const sig of ['SIGINT', 'SIGTERM']) process.on(sig, () => { flush(); process.exit(0); });
-server.listen(PORT, HOST, () => { console.log('Qiao is running on port ' + PORT); firstInvite(); });
+// Every entry in updates.json is posted once to Announcements, from "Qiao", in each reader's language.
+// Installing an update restarts the server, so new entries go out (and notify everyone) right away.
+function postUpdates() {
+  let entries;
+  try { entries = JSON.parse(fs.readFileSync(path.join(__dirname, 'updates.json'), 'utf8')); } catch { return; }
+  const done = new Set(db.settings.posted || []);
+  const fresh = entries.filter(e => e && typeof e.id === 'string' && e.en && !done.has(e.id));
+  if (!fresh.length) return;
+  let m;
+  for (const e of fresh) {
+    const ann = {}; for (const k of Object.keys(TR_LANGS)) if (typeof e[k] === 'string') ann[k] = e[k];
+    m = { id: rid(9), conv: 'news', from: 'qiao', text: '', ann, ts: Date.now(), upd: e.id };
+    list('news').push(m);
+    fs.appendFileSync(MSG_FILE, JSON.stringify(m) + '\n');
+    done.add(e.id);
+  }
+  db.settings.posted = [...done]; flush();
+  console.log('Posted ' + fresh.length + ' update(s) to Announcements');
+  for (const u of Object.values(db.users)) pushTo(u, m).catch(() => {}); // one ping, for the newest
+}
+server.listen(PORT, HOST, () => { console.log('Qiao is running on port ' + PORT); firstInvite(); postUpdates(); });
