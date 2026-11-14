@@ -52,5 +52,14 @@
     "vi": "🖼️ Chủ đề của riêng bạn\nTrong phần chọn chủ đề, bấm “Ảnh của bạn” và chọn một bức ảnh bất kỳ. Ảnh sẽ thành nền trò chuyện cho mọi người trong cuộc trò chuyện đó, và màu bong bóng được lấy theo ảnh.",
     "ja": "🖼️ オリジナルのテーマ\nテーマ選択で「自分の写真」をタップして、好きな画像を選んでください。そのチャットの全員の背景になり、吹き出しの色も写真に合わせて選ばれます。",
     "ko": "🖼️ 나만의 채팅 테마\n테마 선택에서 ‘내 사진’을 누르고 원하는 사진을 고르세요. 그 채팅의 모두에게 배경이 되고, 말풍선 색은 사진에 맞춰 골라져요."
+  },
+  {
+    "id": "2026-11-15-threads",
+    "en": "🧵 Threads for announcements\nEach announcement is now its own card. Tap one to open its thread, where everyone can reply and talk about that update.",
+    "zh": "🧵 公告讨论区\n每条公告现在都是一张单独的卡片。点开就能进入它的讨论，大家都可以在里面回复，聊聊这次更新。",
+    "hi": "🧵 घोषणाओं के थ्रेड\nहर घोषणा अब अपना अलग कार्ड है। किसी पर टैप करके उसका थ्रेड खोलें, जहाँ सब उस अपडेट पर जवाब दे सकते हैं और बात कर सकते हैं।",
+    "vi": "🧵 Chủ đề cho thông báo\nMỗi thông báo giờ là một thẻ riêng. Chạm vào để mở chủ đề của nó, nơi mọi người có thể trả lời và bàn về bản cập nhật đó.",
+    "ja": "🧵 お知らせのスレッド\nお知らせは一つずつカードになりました。タップするとスレッドが開き、そのアップデートについてみんなで返信や話ができます。",
+    "ko": "🧵 공지 스레드\n이제 공지마다 따로 카드가 있어요. 누르면 스레드가 열리고, 모두가 그 업데이트에 대해 답장하고 이야기할 수 있어요."
   }
 ]

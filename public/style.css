@@ -349,3 +349,20 @@ a.ghost { padding: 8px 12px; border-radius: 999px; text-decoration: none; font-s
 .swatch.upload .sw-art { align-items: center; font-size: 1.75rem; color: var(--soft); background: var(--bg); border: 2px dashed var(--line); }
 .swatch.upload[aria-pressed="true"] .sw-art { border: 2px solid var(--candle); }
 .swatch.busy { opacity: .5; pointer-events: none; }
+
+/* ----- announcement cards and threads ----- */
+.msg.newsmsg { max-width: min(100%, 620px); width: 100%; align-self: center; margin-top: 10px; }
+.newscard { display: grid; gap: 6px; background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 14px 16px 12px; cursor: pointer; color: var(--ink); text-align: left; }
+.newscard:hover, .newscard:focus-visible { border-color: var(--candle); }
+.nc-head { display: flex; justify-content: space-between; gap: 10px; font-size: .8125rem; color: var(--soft); }
+.nc-from { color: var(--candle); font-weight: 600; }
+.nc-title { font-weight: 700; font-size: 1.0625rem; line-height: 1.35; }
+.nc-body { color: var(--soft); white-space: pre-wrap; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.nc-img { max-height: 180px; width: 100%; object-fit: cover; border-radius: 12px; }
+.nc-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; padding-top: 8px; border-top: 1px solid var(--line); color: var(--soft); font-size: .875rem; }
+.nc-foot.new { color: var(--ink); font-weight: 600; }
+.msg.newsmsg .rx { margin-top: -10px; }
+.msg.thread-root { max-width: min(100%, 620px); align-self: center; width: 100%; }
+.msg.thread-root .bubble { border-radius: 18px; }
+.thread-div { margin-top: 18px; }
+.news-note .hint-line { display: block; margin-top: 2px; }

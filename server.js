@@ -177,7 +177,8 @@ async function pushTo(u, m, override) {
   if (!u.push || !u.push.length) return;
   const lang = u.lang || 'en';
   const sender = db.users[m.from];
-  const title = (sender ? sender.name : 'Qiao 桥') + (m.conv === 'lobby' || m.conv === 'news' ? ' · ' + PUSH_WORDS[m.conv][lang] : '');
+  const grp = m.conv.startsWith('th:') ? 'news' : m.conv;
+  const title = (sender ? sender.name : 'Qiao 桥') + (grp === 'lobby' || grp === 'news' ? ' · ' + PUSH_WORDS[grp][lang] : '');
   let body = m.ann ? m.ann[lang] || m.ann.en : override ? '🎮 ' + PUSH_WORDS[override][lang] : m.text || (m.game ? '🎮 ' + PUSH_WORDS.game[lang] : PUSH_WORDS.photo[lang]);
   if (m.text && !override && !m.ann) { try { const t = await Promise.race([translateFor(u, m), new Promise(r => setTimeout(() => r(null), 4000))]); if (t) body = t; } catch { /* send the original */ } }
   const payload = JSON.stringify({ title, body: [...body].slice(0, 180).join(''), conv: m.conv });
@@ -273,10 +274,19 @@ function json(res, status, body) {
 // which conversations a user may touch, and who is in them
 function members(uid, conv) {
   if (conv === 'lobby' || conv === 'news') return Object.keys(db.users); // news = Announcements: everyone reads, the admin posts
+  if (threadRoot(conv)) return Object.keys(db.users); // th:<post id> = the comment thread under one announcement
   const m = /^dm:([\w-]+):([\w-]+)$/.exec(String(conv)); if (!m) return null;
   const [, a, b] = m;
   if (a === b || (a !== uid && b !== uid) || !db.users[a] || !db.users[b] || dmId(a, b) !== conv) return null;
   return [a, b];
+}
+function threadRoot(conv) {
+  const t = /^th:([\w-]+)$/.exec(String(conv)); if (!t) return null;
+  return (convs.get('news') || []).find(x => x.id === t[1]) || null;
+}
+function threadInfo(u, rootId) {
+  const conv = 'th:' + rootId, a = convs.get(conv) || [];
+  return { n: a.length, last: a.length ? a[a.length - 1].ts : 0, unread: summary(u, conv).unread };
 }
 function viewMsg(m, uid) {
   if (!m || !m.game || m.game.kind !== 'rps' || m.game.done) return m;
@@ -410,6 +420,7 @@ async function route(req, res) {
 
   if (p === '/api/me' && req.method === 'GET') {
     const out = { lobby: summary(me, 'lobby'), news: summary(me, 'news') };
+    for (const k of convs.keys()) if (k.startsWith('th:') && threadRoot(k)) out[k] = summary(me, k);
     for (const id of Object.keys(db.users)) if (id !== me.id) { const c = dmId(me.id, id); out[c] = summary(me, c); }
     return json(res, 200, { me: own(me), users: Object.values(db.users).map(pub), online: [...sockets.keys()], convs: out });
   }
@@ -491,7 +502,10 @@ async function route(req, res) {
     // how far each other member has read this chat, for "Seen"
     const seen = {};
     for (const uid of members(me.id, conv)) if (uid !== me.id && db.users[uid]) seen[uid] = (db.users[uid].read && db.users[uid].read[conv]) || 0;
-    return json(res, 200, { messages: a.slice(start, end).map(m => viewMsg(m, me.id)), more: start > 0, seen, theme: db.themes[conv] || 'forest' });
+    const out = { messages: a.slice(start, end).map(m => viewMsg(m, me.id)), more: start > 0, seen, theme: db.themes[conv] || 'forest' };
+    if (conv === 'news') { out.threads = {}; for (const m of out.messages) out.threads[m.id] = threadInfo(me, m.id); }
+    const root = threadRoot(conv); if (root) out.root = root;
+    return json(res, 200, out);
   }
 
   if (p === '/api/translate' && req.method === 'POST') {
@@ -600,7 +614,10 @@ function onMessage(ws, d) {
     fs.appendFile(MSG_FILE, JSON.stringify(m) + '\n', err => { if (err) console.error('could not save message', err); });
     (me.read = me.read || {})[d.conv] = m.ts; save();
     sendTo(who, { t: 'msg', m, cid: typeof d.cid === 'string' ? d.cid.slice(0, 40) : undefined });
-    for (const uid of who) if (uid !== me.id && db.users[uid] && !looking(uid)) pushTo(db.users[uid], m).catch(() => {});
+    let notify = who;
+    const root = threadRoot(d.conv);
+    if (root) notify = [...new Set([root.from, ...(convs.get(d.conv) || []).map(x => x.from), ...Object.values(db.users).filter(u => u.admin).map(u => u.id)])];
+    for (const uid of notify) if (uid !== me.id && db.users[uid] && !looking(uid)) pushTo(db.users[uid], m).catch(() => {});
   } else if (d.t === 'edit' || d.t === 'del') {
     if (limited('ed:' + me.id, 30, 60000)) return ws.send(JSON.stringify({ t: 'error', error: 'slow_down' }));
     const m = (convs.get(d.conv) || []).find(x => x.id === d.id); if (!m) return;
@@ -622,7 +639,7 @@ function onMessage(ws, d) {
     const a = convs.get(d.conv) || [];
     sendEach(who, uid => d.t === 'edit' ? { t: 'edit', m: viewMsg(m, uid) } : { t: 'del', conv: d.conv, id: m.id, last: viewMsg(a[a.length - 1] || null, uid) });
   } else if (d.t === 'theme') {
-    if (d.conv === 'news') return;
+    if (d.conv === 'news' || d.conv.startsWith('th:')) return;
     let val; // a built-in theme name, or { key: 'custom', img, accent } for a photo someone uploaded
     if (d.key === 'custom') {
       if (typeof d.img !== 'string' || !UPLOAD_RE.test(d.img) || !fs.existsSync(path.join(UP, d.img)) || !/^#[0-9a-f]{6}$/i.test(d.accent || '')) return;

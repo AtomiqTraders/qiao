@@ -24,6 +24,7 @@
       th_custom: 'a photo', th_upload: 'Your photo',
       th_forest: 'Forest', th_sakura: 'Sakura', th_ocean: 'Ocean', th_sunset: 'Sunset', th_lavender: 'Lavender', th_midnight: 'Midnight', th_matcha: 'Matcha', th_candy: 'Candy',
       news: 'Announcements', news_sub: 'Updates and news', news_readonly: 'Only the admin can post here',
+      news_hint: 'Tap a post to open its thread.', thread_start: 'Reply in thread', replies_one: '1 reply', replies_n: '{0} replies', replies_head: 'Replies',
       nobody: 'Nobody else is here yet. Invite a friend.',
       online: 'Here now', offline: 'Away',
       older: 'Show earlier messages', send: 'Send', send_photo: 'Send a photo',
@@ -74,6 +75,7 @@
       th_custom: '一张照片', th_upload: '自己的照片',
       th_forest: '森林', th_sakura: '樱花', th_ocean: '海洋', th_sunset: '日落', th_lavender: '薰衣草', th_midnight: '午夜', th_matcha: '抹茶', th_candy: '糖果',
       news: '公告', news_sub: '更新和消息', news_readonly: '只有管理员可以在这里发言',
+      news_hint: '点一条公告就能打开它的讨论。', thread_start: '在讨论里回复', replies_one: '1 条回复', replies_n: '{0} 条回复', replies_head: '回复',
       nobody: '这里还没有其他人，邀请一位朋友吧。',
       online: '在线', offline: '离开',
       older: '查看更早的消息', send: '发送', send_photo: '发送图片',
@@ -334,14 +336,15 @@
   function msgLabel(m) { if (m.sys) return t('theme_changed', nameOf(m.from), themeLabel(m.sys.theme)); return m.text || annText(m) || (m.game ? '🎮 ' + t(m.game.kind || m.game) : t('photo')); }
   function roomRow(conv, title, sub, user) {
     const b = el('button', 'room'); b.type = 'button';
-    if (conv === current) b.setAttribute('aria-current', 'true');
+    if (conv === current || (conv === 'news' && current && current.startsWith('th:'))) b.setAttribute('aria-current', 'true');
     const av = el('span', 'avatar' + (user ? '' : ' lobby'), user ? [...user.name][0].toUpperCase() : conv === 'news' ? '📣' : '桥');
     if (user) { av.style.background = user.color; av.append(el('span', 'flame' + (online.has(user.id) ? ' lit' : ''))); }
     const text = el('span', 'text');
     text.append(el('div', 'who', title), el('div', 'last', sub));
     b.append(av, text);
-    const c = convs[conv];
-    if (c && c.unread) b.append(el('span', 'badge', c.unread > 99 ? '99+' : String(c.unread)));
+    let n = (convs[conv] && convs[conv].unread) || 0;
+    if (conv === 'news') for (const k of Object.keys(convs)) if (k.startsWith('th:')) n += convs[k].unread || 0;
+    if (n) b.append(el('span', 'badge', n > 99 ? '99+' : String(n)));
     b.addEventListener('click', () => openConv(conv, true));
     return b;
   }
@@ -405,9 +408,17 @@
   $('#themeDlg').addEventListener('click', ev => { if (ev.target === $('#themeDlg')) $('#themeDlg').close(); });
   function renderHead() {
     $('#gameBtn').hidden = !current.startsWith('dm:');
-    $('#themeBtn').hidden = current === 'news';
-    const readOnly = current === 'news' && !me.admin; // only the admin posts announcements
+    const thread = current.startsWith('th:');
+    $('#themeBtn').hidden = current === 'news' || thread;
+    const readOnly = current === 'news' && !me.admin; // only the admin posts announcements; everyone can reply in threads
     $('#composer').hidden = readOnly; $('#newsNote').hidden = !readOnly;
+    $('#newsNote').textContent = t('news_readonly'); $('#newsNote').append(el('span', 'hint-line', t('news_hint')));
+    if (thread) {
+      const root = cache[current] && cache[current].root;
+      $('#chatTitle').textContent = root ? postTitle(root) : t('news');
+      $('#chatSub').textContent = t('news');
+      return;
+    }
     const u = otherOf(current), group = current === 'news' ? 'news' : 'lobby';
     $('#chatTitle').textContent = u ? u.name : t(group);
     $('#chatSub').textContent = u ? t(online.has(u.id) ? 'online' : 'offline') : t(group + '_sub');
@@ -646,7 +657,7 @@
   }
   const canPost = () => current !== 'news' || me.admin;
   function startReply(m) {
-    if (!canPost()) return; if (editing) input.value = ''; editing = null; replyTo = m; showCtx(); grow(); input.focus(); }
+    if (!canPost() || current === 'news' || m.conv !== current) return; /* in the channel you reply inside the post's thread */ if (editing) input.value = ''; editing = null; replyTo = m; showCtx(); grow(); input.focus(); }
   function startEdit(m) { replyTo = null; editing = m; input.value = m.text; showCtx(); grow(); input.focus(); input.setSelectionRange(input.value.length, input.value.length); }
   function cancelCtx() { if (editing) input.value = ''; replyTo = null; editing = null; showCtx(); grow(); }
   $('#ctxClose').addEventListener('click', () => { cancelCtx(); input.focus(); });
@@ -719,12 +730,52 @@
   const box = $('#msgs');
   const toBottom = () => { box.scrollTop = box.scrollHeight; };
   box.addEventListener('scroll', () => { stick = box.scrollHeight - box.scrollTop - box.clientHeight < 80; });
+  const postText = m => m.text || annText(m) || '';
+  const postTitle = m => postText(m).split('\n')[0].slice(0, 80) || msgLabel(m);
+  function newsNode(m) {
+    const wrap = el('div', 'msg newsmsg'); wrap.dataset.id = m.id;
+    const hint = el('span', 'reply-hint'); hint.hidden = true; wrap.append(hint);
+    const card = el('div', 'newscard'); card.tabIndex = 0; card.setAttribute('role', 'button');
+    const head = el('div', 'nc-head');
+    head.append(el('span', 'nc-from', nameOf(m.from)), el('time', null, dayLabel(m.ts) + ' ' + clock(m.ts)));
+    const lines = postText(m).split('\n');
+    const title = el('div', 'nc-title', lines[0]), body = el('div', 'nc-body', lines.slice(1).join('\n'));
+    card.append(head, title);
+    if (body.textContent) card.append(body);
+    if (m.img) { const img = el('img', 'nc-img'); img.src = '/u/' + m.img; img.alt = ''; img.loading = 'lazy'; card.append(img); }
+    if (m.text && needsTr(m.text)) fetchTr(m).then(tx => { if (!tx) return; const l = tx.split('\n'); title.textContent = l[0]; body.textContent = l.slice(1).join('\n'); if (body.textContent && !body.parentNode) title.after(body); }).catch(() => {});
+    const info = (cache.news && cache.news.threads && cache.news.threads[m.id]) || { n: 0 };
+    const unread = (convs['th:' + m.id] && convs['th:' + m.id].unread) || 0;
+    const foot = el('div', 'nc-foot' + (unread ? ' new' : ''));
+    foot.append(el('span', null, '💬 ' + (info.n ? (info.n === 1 ? t('replies_one') : t('replies_n', info.n)) : t('thread_start'))));
+    if (unread) foot.append(el('span', 'badge', String(unread)));
+    card.append(foot);
+    const open = () => openConv('th:' + m.id, false);
+    card.addEventListener('click', open);
+    card.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); open(); } });
+    wrap.append(card);
+    if (m.rx && Object.keys(m.rx).length) wrap.append(rxNode(m));
+    bindGestures(wrap, m);
+    return wrap;
+  }
   function renderMsgs(keepPlace) {
     const c = cache[current]; if (!c) return;
     const listEl = $('#msgList'), before = box.scrollHeight, top = box.scrollTop;
     listEl.textContent = '';
     $('#olderBtn').hidden = !c.more;
-    if (!c.list.length) listEl.append(el('p', 'empty', t('empty_chat')));
+    if (current === 'news') { // the channel: one card per announcement, newest at the bottom
+      applyTheme('forest');
+      if (!c.list.length) listEl.append(el('p', 'empty', t('news_sub')));
+      for (const m of c.list) listEl.append(newsNode(m));
+      if (keepPlace && !stick) box.scrollTop = top + (box.scrollHeight - before); else toBottom();
+      return;
+    }
+    if (c.root) { // a thread: the announcement first, then the replies
+      $('#chatTitle').textContent = postTitle(c.root);
+      const r = msgNode(c.root, null, null); r.classList.add('thread-root'); listEl.append(r);
+      listEl.append(el('div', 'day thread-div', t('replies_head')));
+    }
+    if (!c.list.length) listEl.append(el('p', 'empty', c.root ? t('thread_start') : t('empty_chat')));
     c.list.forEach((m, i) => {
       const prev = c.list[i - 1] || null;
       if (!prev || dayLabel(prev.ts) !== dayLabel(m.ts)) listEl.append(el('div', 'day', dayLabel(m.ts)));
@@ -732,7 +783,7 @@
     });
     applyTheme(c.theme);
     const last = c.list[c.list.length - 1];
-    if (last && last.from === me.id && !last.sys) {
+    if (last && last.from === me.id && !last.sys && !c.root) {
       const seen = c.seen || {};
       const who = Object.keys(seen).filter(uid => users.has(uid) && seen[uid] >= last.ts);
       let text;
@@ -755,7 +806,7 @@
     const q = '/api/messages?conv=' + encodeURIComponent(conv) + (older && c.list[0] ? '&before=' + c.list[0].id : '');
     const r = await api(q);
     c.list = older ? r.messages.concat(c.list) : r.messages;
-    c.more = r.more; c.theme = r.theme || c.theme; c.seen = Object.assign(c.seen || {}, r.seen || {});
+    c.more = r.more; c.theme = r.theme || c.theme; if (r.threads) c.threads = Object.assign(c.threads || {}, r.threads); if (r.root) c.root = r.root; c.seen = Object.assign(c.seen || {}, r.seen || {});
   }
   async function openConv(conv, pushHistory) {
     if (conv !== current && (replyTo || editing)) cancelCtx();
@@ -771,7 +822,7 @@
     if (!narrow()) $('#input').focus();
   }
   function closeChat() { document.body.classList.remove('in-chat'); if (narrow()) { current = null; renderSide(); } }
-  $('#backBtn').addEventListener('click', () => { if (history.state && history.state.chat) history.back(); else closeChat(); });
+  $('#backBtn').addEventListener('click', () => { if (current && current.startsWith('th:')) return openConv('news', false); if (history.state && history.state.chat) history.back(); else closeChat(); });
   addEventListener('popstate', closeChat);
   $('#olderBtn').addEventListener('click', async () => {
     const conv = current; stick = false;
@@ -868,6 +919,11 @@
       c.last = m;
       if (cache[m.conv] && m.from !== me.id) { const sc = cache[m.conv].seen = cache[m.conv].seen || {}; if ((sc[m.from] || 0) < m.ts) sc[m.from] = m.ts; }
       if (cache[m.conv] && !cache[m.conv].list.some(x => x.id === m.id)) { cache[m.conv].list.push(m); fresh.add(m.id); }
+      if (m.conv.startsWith('th:') && cache.news) { // keep the reply count on the channel card current
+        const th = (cache.news.threads = cache.news.threads || {}), k = m.conv.slice(3);
+        th[k] = { n: ((th[k] && th[k].n) || 0) + 1, last: m.ts };
+        if (current === 'news') renderMsgs(true);
+      }
       if (typers[m.conv] && typers[m.conv][m.from]) { clearTimeout(typers[m.conv][m.from]); delete typers[m.conv][m.from]; }
       if (m.conv === current) {
         const wasStuck = stick || m.from === me.id;
@@ -890,11 +946,17 @@
         if (convs[conv]) convs[conv].last = d.last;
       }
       if ((replyTo && replyTo.id === id) || (editing && editing.id === id && d.t === 'del')) cancelCtx();
+      const tc = cache['th:' + id];
+      if (tc && tc.root) { if (d.t === 'edit') tc.root = d.m; else if (current === 'th:' + id) { delete cache['th:' + id]; return openConv('news', false); } }
+      if (current === 'th:' + id) { renderHead(); renderMsgs(true); }
       if (conv === current) renderMsgs(true);
       renderSide();
     } else if (d.t === 'rx' || d.t === 'game') {
       const c = cache[d.conv], x = c && c.list.find(y => y.id === d.id);
-      if (x) { if (d.t === 'rx') { if (Object.keys(d.rx).length) x.rx = d.rx; else delete x.rx; } else x.game = d.game; }
+      const setRx = y => { if (Object.keys(d.rx).length) y.rx = d.rx; else delete y.rx; };
+      if (x) { if (d.t === 'rx') setRx(x); else x.game = d.game; }
+      const tc = d.t === 'rx' && cache['th:' + d.id]; // a reaction on a post also shows at the top of its thread
+      if (tc && tc.root) { setRx(tc.root); if (current === 'th:' + d.id) renderMsgs(true); }
       if (d.t === 'game' && convs[d.conv] && convs[d.conv].last && convs[d.conv].last.id === d.id) convs[d.conv].last.game = d.game;
       if (d.conv === current) renderMsgs(true);
     } else if (d.t === 'theme') {
