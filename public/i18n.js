@@ -3,6 +3,7 @@
    Any key missing here falls back to English. */
 window.QIAO_I18N = {
   hi: {
+    sent: 'भेजा गया', seen: 'देखा गया', seen_by: '{0} ने देखा', seen_all: 'सबने देखा',
     replying_self: 'अपने संदेश को जवाब',
     reply: 'जवाब दें', copy_text: 'कॉपी करें', edit: 'बदलें', delete: 'हटाएँ', delete_confirm: 'हटाने के लिए फिर टैप करें', cancel: 'रद्द करें', replying_to: '{0} को जवाब', editing: 'संदेश बदल रहे हैं', edited: 'बदला गया', copied_text: 'कॉपी हो गया', msg_deleted: 'संदेश हटा दिया गया',
     notif_on: '🔔 सूचनाएँ: चालू', notif_off: '🔕 सूचनाएँ: बंद', notif_blocked: '🔕 सूचनाएँ: ब्लॉक',
@@ -45,6 +46,7 @@ window.QIAO_I18N = {
     err_server: 'सर्वर में कुछ गड़बड़ हुई। फिर कोशिश करें।'
   },
   vi: {
+    sent: 'Đã gửi', seen: 'Đã xem', seen_by: '{0} đã xem', seen_all: 'Mọi người đã xem',
     replying_self: 'Đang trả lời chính bạn',
     reply: 'Trả lời', copy_text: 'Sao chép', edit: 'Sửa', delete: 'Xóa', delete_confirm: 'Nhấn lần nữa để xóa', cancel: 'Hủy', replying_to: 'Đang trả lời {0}', editing: 'Đang sửa tin nhắn', edited: 'đã sửa', copied_text: 'Đã sao chép', msg_deleted: 'Tin nhắn đã bị xóa',
     notif_on: '🔔 Thông báo: bật', notif_off: '🔕 Thông báo: tắt', notif_blocked: '🔕 Thông báo: bị chặn',
@@ -87,6 +89,7 @@ window.QIAO_I18N = {
     err_server: 'Máy chủ gặp lỗi. Hãy thử lại.'
   },
   ja: {
+    sent: '送信済み', seen: '既読', seen_by: '{0} が既読', seen_all: '全員が既読',
     replying_self: '自分のメッセージに返信',
     reply: '返信', copy_text: 'コピー', edit: '編集', delete: '削除', delete_confirm: 'もう一度タップで削除', cancel: 'キャンセル', replying_to: '{0} さんに返信', editing: 'メッセージを編集中', edited: '編集済み', copied_text: 'コピーしました', msg_deleted: 'メッセージは削除されました',
     notif_on: '🔔 通知：オン', notif_off: '🔕 通知：オフ', notif_blocked: '🔕 通知：ブロック中',
@@ -129,6 +132,7 @@ window.QIAO_I18N = {
     err_server: 'サーバーで問題が起きました。もう一度お試しください。'
   },
   ko: {
+    sent: '전송됨', seen: '읽음', seen_by: '{0} 님이 읽음', seen_all: '모두 읽음',
     replying_self: '내 메시지에 답장',
     reply: '답장', copy_text: '복사', edit: '수정', delete: '삭제', delete_confirm: '한 번 더 누르면 삭제', cancel: '취소', replying_to: '{0} 님에게 답장', editing: '메시지 수정 중', edited: '수정됨', copied_text: '복사했습니다', msg_deleted: '삭제된 메시지입니다',
     notif_on: '🔔 알림: 켜짐', notif_off: '🔕 알림: 꺼짐', notif_blocked: '🔕 알림: 차단됨',

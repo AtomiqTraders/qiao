@@ -33,6 +33,7 @@
       admin: 'Admin', removed_user: 'Removed member', err_forbidden: 'Only the admin can do that.',
       langs_btn: 'Languages', langs_title: 'Which languages can you read?',
       langs_body: 'Messages in any other language are translated for you.', save: 'Save',
+      sent: 'Sent', seen: 'Seen', seen_by: 'Seen by {0}', seen_all: 'Seen by everyone',
       reply: 'Reply', copy_text: 'Copy', edit: 'Edit', delete: 'Delete', delete_confirm: 'Tap again to delete', cancel: 'Cancel',
       replying_to: 'Replying to {0}', replying_self: 'Replying to yourself', editing: 'Editing message', edited: 'edited', copied_text: 'Copied', msg_deleted: 'Message was deleted',
       notif_on: '🔔 Notifications: on', notif_off: '🔕 Notifications: off', notif_blocked: '🔕 Notifications: blocked',
@@ -75,6 +76,7 @@
       admin: '管理', removed_user: '已移除的成员', err_forbidden: '只有管理员可以这样做。',
       langs_btn: '语言设置', langs_title: '你能看懂哪些语言？',
       langs_body: '其他语言的消息会自动为你翻译。', save: '保存',
+      sent: '已发送', seen: '已读', seen_by: '{0} 已读', seen_all: '所有人已读',
       reply: '回复', copy_text: '复制', edit: '编辑', delete: '删除', delete_confirm: '再点一次删除', cancel: '取消',
       replying_to: '回复 {0}', replying_self: '回复自己的消息', editing: '正在编辑消息', edited: '已编辑', copied_text: '已复制', msg_deleted: '消息已被删除',
       notif_on: '🔔 消息通知：开', notif_off: '🔕 消息通知：关', notif_blocked: '🔕 消息通知：被阻止',
@@ -533,6 +535,23 @@
       if (!prev || dayLabel(prev.ts) !== dayLabel(m.ts)) listEl.append(el('div', 'day', dayLabel(m.ts)));
       listEl.append(msgNode(m, prev, c.list[i + 1] || null));
     });
+    const last = c.list[c.list.length - 1];
+    if (last && last.from === me.id) {
+      const seen = c.seen || {};
+      const who = Object.keys(seen).filter(uid => users.has(uid) && seen[uid] >= last.ts);
+      let text;
+      if (current !== 'lobby') text = t(who.length ? 'seen' : 'sent');
+      else if (!who.length) text = t('sent');
+      else if (who.length === Object.keys(seen).filter(uid => users.has(uid)).length) text = t('seen_all');
+      else {
+        const names = who.map(uid => users.get(uid).name);
+        const shown = names.length > 3 ? names.slice(0, 3).concat('+' + (names.length - 3)) : names;
+        let joined; try { joined = new Intl.ListFormat(LOCALE[lang], { type: 'conjunction' }).format(shown); } catch { joined = shown.join(', '); }
+        text = t('seen_by', joined);
+      }
+      const st = el('div', 'status' + (text === t('sent') ? '' : ' seen'), text);
+      listEl.lastElementChild.append(st);
+    }
     if (keepPlace && !stick) box.scrollTop = top + (box.scrollHeight - before); else toBottom();
   }
   async function loadMsgs(conv, older) {
@@ -540,7 +559,7 @@
     const q = '/api/messages?conv=' + encodeURIComponent(conv) + (older && c.list[0] ? '&before=' + c.list[0].id : '');
     const r = await api(q);
     c.list = older ? r.messages.concat(c.list) : r.messages;
-    c.more = r.more;
+    c.more = r.more; c.seen = Object.assign(c.seen || {}, r.seen || {});
   }
   async function openConv(conv, pushHistory) {
     if (conv !== current && (replyTo || editing)) cancelCtx();
@@ -646,6 +665,7 @@
     if (d.t === 'msg') {
       const m = d.m, c = convs[m.conv] || (convs[m.conv] = { last: null, unread: 0 });
       c.last = m;
+      if (cache[m.conv] && m.from !== me.id) { const sc = cache[m.conv].seen = cache[m.conv].seen || {}; if ((sc[m.from] || 0) < m.ts) sc[m.from] = m.ts; }
       if (cache[m.conv] && !cache[m.conv].list.some(x => x.id === m.id)) cache[m.conv].list.push(m);
       if (typers[m.conv] && typers[m.conv][m.from]) { clearTimeout(typers[m.conv][m.from]); delete typers[m.conv][m.from]; }
       if (m.conv === current) {
@@ -671,6 +691,10 @@
       if ((replyTo && replyTo.id === id) || (editing && editing.id === id && d.t === 'del')) cancelCtx();
       if (conv === current) renderMsgs(true);
       renderSide();
+    } else if (d.t === 'seen') {
+      const c = cache[d.conv]; if (!c) return;
+      c.seen = c.seen || {}; if ((c.seen[d.uid] || 0) < d.ts) c.seen[d.uid] = d.ts;
+      if (d.conv === current) renderMsgs(true);
     } else if (d.t === 'typing') {
       const map = typers[d.conv] || (typers[d.conv] = {});
       clearTimeout(map[d.from]);

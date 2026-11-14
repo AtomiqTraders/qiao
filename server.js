@@ -436,7 +436,10 @@ async function route(req, res) {
     let end = a.length;
     if (before) { const i = a.findIndex(m => m.id === before); if (i >= 0) end = i; }
     const start = Math.max(0, end - 50);
-    return json(res, 200, { messages: a.slice(start, end), more: start > 0 });
+    // how far each other member has read this chat, for "Seen"
+    const seen = {};
+    for (const uid of members(me.id, conv)) if (uid !== me.id && db.users[uid]) seen[uid] = (db.users[uid].read && db.users[uid].read[conv]) || 0;
+    return json(res, 200, { messages: a.slice(start, end), more: start > 0, seen });
   }
 
   if (p === '/api/translate' && req.method === 'POST') {
@@ -567,8 +570,10 @@ function onMessage(ws, d) {
     if (!limited('ty:' + me.id, 10, 10000)) sendTo(who, { t: 'typing', conv: d.conv, from: me.id }, ws);
   } else if (d.t === 'read') {
     const a = convs.get(d.conv); if (!a || !a.length) return;
-    (me.read = me.read || {})[d.conv] = a[a.length - 1].ts; save();
+    const ts = a[a.length - 1].ts;
+    (me.read = me.read || {})[d.conv] = ts; save();
     sendTo([me.id], { t: 'read', conv: d.conv }, ws);
+    sendTo(who.filter(uid => uid !== me.id), { t: 'seen', conv: d.conv, uid: me.id, ts });
   }
 }
 

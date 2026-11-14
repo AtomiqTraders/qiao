@@ -235,3 +235,6 @@ a.ghost { padding: 8px 12px; border-radius: 999px; text-decoration: none; font-s
 .sheet-act:hover { background: var(--raise); }
 .sheet-act.danger { color: var(--danger); }
 .sheet-act.danger.armed { background: var(--danger); color: var(--bg); font-weight: 600; }
+
+.msg .status { font-size: .6875rem; color: var(--soft); text-align: right; margin: 0 12px 4px; }
+.msg .status.seen { color: var(--candle); }
