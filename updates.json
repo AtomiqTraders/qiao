@@ -34,5 +34,14 @@
     "vi": "📣 Thông báo\nĐây là kênh mới. Mỗi bản cập nhật của Qiao sẽ tự động được đăng ở đây để bạn luôn biết có gì thay đổi.",
     "ja": "📣 お知らせ\n新しいチャンネルです。Qiao のアップデートはここに自動で投稿されるので、何が変わったかいつでも分かります。",
     "ko": "📣 공지\n새로 생긴 채널이에요. Qiao가 업데이트될 때마다 여기에 자동으로 올라오니, 무엇이 바뀌었는지 언제든 알 수 있어요."
+  },
+  {
+    "id": "2026-11-15-themes",
+    "en": "🎨 Chat themes\nTap the palette at the top of a chat to pick a theme: Sakura, Ocean, Sunset, Lavender, Midnight, Matcha, Candy or Forest. Everyone in the chat sees it. Bubbles are rounder too, new messages pop in, and typing shows little dots.",
+    "zh": "🎨 聊天主题\n点聊天顶部的调色板就能换主题：樱花、海洋、日落、薰衣草、午夜、抹茶、糖果或森林。聊天里的每个人都会看到。气泡也更圆了，新消息会轻轻弹出来，对方打字时会显示小圆点。",
+    "hi": "🎨 चैट थीम\nचैट के ऊपर पैलेट दबाकर थीम चुनें: सकुरा, समंदर, सूर्यास्त, लैवेंडर, आधी रात, माचा, कैंडी या जंगल। चैट में सबको वही थीम दिखेगी। बबल अब और गोल हैं, नए संदेश हल्के से उभरते हैं, और टाइप करते समय छोटे बिंदु दिखते हैं।",
+    "vi": "🎨 Chủ đề trò chuyện\nBấm vào bảng màu ở đầu cuộc trò chuyện để chọn chủ đề: Hoa anh đào, Đại dương, Hoàng hôn, Oải hương, Nửa đêm, Matcha, Kẹo ngọt hoặc Rừng. Mọi người trong cuộc trò chuyện đều thấy. Bong bóng tin nhắn tròn hơn, tin nhắn mới hiện ra nhẹ nhàng, và khi ai đó đang gõ sẽ có những chấm nhỏ.",
+    "ja": "🎨 チャットのテーマ\nチャット上部のパレットからテーマを選べます：桜、海、夕焼け、ラベンダー、真夜中、抹茶、キャンディ、森。チャットの全員に同じテーマが表示されます。吹き出しも丸くなり、新しいメッセージはふわっと表示され、入力中は小さな点が動きます。",
+    "ko": "🎨 채팅 테마\n채팅 위쪽의 팔레트를 누르면 테마를 고를 수 있어요: 벚꽃, 바다, 노을, 라벤더, 한밤, 말차, 캔디, 숲. 채팅의 모두에게 같은 테마가 보여요. 말풍선도 더 동글해지고, 새 메시지는 톡 하고 나타나며, 입력 중일 때는 작은 점이 움직여요."
   }
 ]

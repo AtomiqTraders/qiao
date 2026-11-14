@@ -84,12 +84,15 @@
           <h2 id="chatTitle"></h2>
           <p id="chatSub"></p>
         </div>
+        <button class="ghost" id="themeBtn" type="button" data-i18n-label="theme_btn">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.2 0 1.8-.9 1.8-1.8 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-1 .8-1.8 1.8-1.8H17a4 4 0 0 0 4-4C21 6.6 17 3 12 3z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10.5" cy="7" r="1.2"/><circle cx="15" cy="7.5" r="1.2"/></svg>
+        </button>
       </header>
       <div id="msgs" tabindex="0">
         <button class="ghost" id="olderBtn" type="button" data-i18n="older" hidden></button>
         <div id="msgList"></div>
+        <div id="typing" aria-live="polite"></div>
       </div>
-      <p id="typing" aria-live="polite"></p>
       <p id="newsNote" class="news-note" data-i18n="news_readonly" hidden></p>
       <div id="ctxBar" hidden>
         <div class="ctx-text"><div id="ctxLabel"></div><div id="ctxSnip"></div></div>
@@ -131,6 +134,13 @@
     <button class="primary" id="saveLangs" type="button" data-i18n="save"></button>
     <button class="ghost" id="closeLangs" type="button" data-i18n="close"></button>
   </div>
+</dialog>
+
+<dialog id="themeDlg">
+  <h2 data-i18n="theme_btn"></h2>
+  <p data-i18n="theme_body"></p>
+  <div class="swatches" id="swatches"></div>
+  <div class="row"><button class="ghost" id="closeTheme" type="button" data-i18n="close"></button></div>
 </dialog>
 
 <dialog id="gameDlg">

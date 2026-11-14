@@ -20,6 +20,8 @@
       invite_btn: 'Invite a friend', logout: 'Log out',
       pick_chat: 'Pick a conversation to start talking.',
       lobby: 'Lobby', lobby_sub: 'Everyone here', people: 'People',
+      theme_btn: 'Chat theme', theme_body: 'Everyone in this chat sees it.', theme_changed: '{0} changed the theme to {1}',
+      th_forest: 'Forest', th_sakura: 'Sakura', th_ocean: 'Ocean', th_sunset: 'Sunset', th_lavender: 'Lavender', th_midnight: 'Midnight', th_matcha: 'Matcha', th_candy: 'Candy',
       news: 'Announcements', news_sub: 'Updates and news', news_readonly: 'Only the admin can post here',
       nobody: 'Nobody else is here yet. Invite a friend.',
       online: 'Here now', offline: 'Away',
@@ -67,6 +69,8 @@
       invite_btn: '邀请朋友', logout: '退出登录',
       pick_chat: '选择一个对话开始聊天。',
       lobby: '大厅', lobby_sub: '所有人', people: '朋友',
+      theme_btn: '聊天主题', theme_body: '聊天里的每个人都会看到。', theme_changed: '{0} 把主题换成了{1}',
+      th_forest: '森林', th_sakura: '樱花', th_ocean: '海洋', th_sunset: '日落', th_lavender: '薰衣草', th_midnight: '午夜', th_matcha: '抹茶', th_candy: '糖果',
       news: '公告', news_sub: '更新和消息', news_readonly: '只有管理员可以在这里发言',
       nobody: '这里还没有其他人，邀请一位朋友吧。',
       online: '在线', offline: '离开',
@@ -149,6 +153,7 @@
   function applyLang() {
     document.documentElement.lang = LOCALE[lang];
     document.querySelectorAll('[data-i18n]').forEach(n => { n.textContent = t(n.dataset.i18n); });
+    document.querySelectorAll('[data-i18n-label]').forEach(n => { n.setAttribute('aria-label', t(n.dataset.i18nLabel)); n.title = t(n.dataset.i18nLabel); });
     document.querySelectorAll('[data-lang]').forEach(n => { n.textContent = '🌐 ' + LANGS[lang]; });
     $('#input').placeholder = t('type_here');
     showAutoTr(); showNotif();
@@ -273,11 +278,14 @@
   // ---------- conversation list ----------
   function preview(m) {
     if (!m) return '';
-    const who = m.from === me.id ? t('you') + ': ' : (m.conv === 'lobby' && users.get(m.from) ? users.get(m.from).name + ': ' : '');
+    const who = m.sys ? '' : m.from === me.id ? t('you') + ': ' : (m.conv === 'lobby' && users.get(m.from) ? users.get(m.from).name + ': ' : '');
     return who + msgLabel(m);
   }
+  const THEMES = { forest: '🌲', sakura: '🌸', ocean: '🌊', sunset: '🌅', lavender: '💜', midnight: '🌙', matcha: '🍵', candy: '🍬' };
+  const themeLabel = k => (THEMES[k] || '') + ' ' + t('th_' + k);
+  const fresh = new Set(); // messages that just arrived, to animate once
   const annText = m => m.ann ? m.ann[lang] || m.ann.en || '' : '';
-  function msgLabel(m) { return m.text || annText(m) || (m.game ? '🎮 ' + t(m.game.kind || m.game) : t('photo')); }
+  function msgLabel(m) { if (m.sys) return t('theme_changed', nameOf(m.from), themeLabel(m.sys.theme)); return m.text || annText(m) || (m.game ? '🎮 ' + t(m.game.kind || m.game) : t('photo')); }
   function roomRow(conv, title, sub, user) {
     const b = el('button', 'room'); b.type = 'button';
     if (conv === current) b.setAttribute('aria-current', 'true');
@@ -314,8 +322,23 @@
   $('#gameBtn').addEventListener('click', () => { if ($('#gameDlg').open) return; $('#gameDlg').showModal(); });
   for (const b of document.querySelectorAll('#gameDlg [data-game]')) b.addEventListener('click', () => { $('#gameDlg').close(); startGame(b.dataset.game); });
   $('#gameDlg').addEventListener('click', ev => { if (ev.target === $('#gameDlg')) $('#gameDlg').close(); });
+  $('#themeBtn').addEventListener('click', () => {
+    const box = $('#swatches'); box.textContent = '';
+    const cur = (cache[current] && cache[current].theme) || 'forest';
+    for (const k of Object.keys(THEMES)) {
+      const b = el('button', 'swatch'); b.type = 'button'; b.dataset.theme = k; b.setAttribute('aria-pressed', String(k === cur));
+      const art = el('span', 'sw-art'); art.append(el('span', 'sw-a'), el('span', 'sw-b'), el('span', 'sw-c'));
+      b.append(art, el('span', null, themeLabel(k)));
+      b.addEventListener('click', () => { $('#themeDlg').close(); if (k !== cur && !send({ t: 'theme', conv: current, key: k })) toast(t('not_sent')); });
+      box.append(b);
+    }
+    $('#themeDlg').showModal();
+  });
+  $('#closeTheme').addEventListener('click', () => $('#themeDlg').close());
+  $('#themeDlg').addEventListener('click', ev => { if (ev.target === $('#themeDlg')) $('#themeDlg').close(); });
   function renderHead() {
     $('#gameBtn').hidden = !current.startsWith('dm:');
+    $('#themeBtn').hidden = current === 'news';
     const readOnly = current === 'news' && !me.admin; // only the admin posts announcements
     $('#composer').hidden = readOnly; $('#newsNote').hidden = !readOnly;
     const u = otherOf(current), group = current === 'news' ? 'news' : 'lobby';
@@ -339,7 +362,7 @@
     }
     if (i < text.length) node.append(text.slice(i));
   }
-  const sameRun = (a, b) => a && b && a.from === b.from && Math.abs(b.ts - a.ts) <= 5 * 60000 && dayLabel(a.ts) === dayLabel(b.ts);
+  const sameRun = (a, b) => a && b && !a.sys && !b.sys && a.from === b.from && Math.abs(b.ts - a.ts) <= 5 * 60000 && dayLabel(a.ts) === dayLabel(b.ts);
   const nameOf = id => id === me.id ? t('you') : id === 'qiao' ? 'Qiao 桥' : (users.get(id) ? users.get(id).name : t('removed_user'));
   function quoteNode(re) {
     const q = el('button', 'quote'); q.type = 'button';
@@ -349,8 +372,10 @@
     return q;
   }
   function msgNode(m, prev, next) {
+    if (m.sys) { const n = el('div', 'sysline', msgLabel(m)); n.dataset.id = m.id; return n; }
     const mine = m.from === me.id;
-    const wrap = el('div', 'msg' + (mine ? ' mine' : '') + (sameRun(prev, m) ? ' cont' : ''));
+    const wrap = el('div', 'msg' + (mine ? ' mine' : '') + (sameRun(prev, m) ? ' cont has-prev' : '') + (sameRun(m, next) ? ' has-next' : ''));
+    if (fresh.delete(m.id)) wrap.classList.add('pop');
     wrap.dataset.id = m.id;
     const u = users.get(m.from);
     if (!current.startsWith('dm:') && !mine && !sameRun(prev, m)) {
@@ -638,8 +663,9 @@
       if (!prev || dayLabel(prev.ts) !== dayLabel(m.ts)) listEl.append(el('div', 'day', dayLabel(m.ts)));
       listEl.append(msgNode(m, prev, c.list[i + 1] || null));
     });
+    $('#pane').dataset.theme = c.theme || 'forest';
     const last = c.list[c.list.length - 1];
-    if (last && last.from === me.id) {
+    if (last && last.from === me.id && !last.sys) {
       const seen = c.seen || {};
       const who = Object.keys(seen).filter(uid => users.has(uid) && seen[uid] >= last.ts);
       let text;
@@ -662,7 +688,7 @@
     const q = '/api/messages?conv=' + encodeURIComponent(conv) + (older && c.list[0] ? '&before=' + c.list[0].id : '');
     const r = await api(q);
     c.list = older ? r.messages.concat(c.list) : r.messages;
-    c.more = r.more; c.seen = Object.assign(c.seen || {}, r.seen || {});
+    c.more = r.more; c.theme = r.theme || c.theme; c.seen = Object.assign(c.seen || {}, r.seen || {});
   }
   async function openConv(conv, pushHistory) {
     if (conv !== current && (replyTo || editing)) cancelCtx();
@@ -695,7 +721,12 @@
   function showTyping() {
     const ids = Object.keys(typers[current] || {});
     const names = ids.map(id => users.get(id)).filter(Boolean).map(u => u.name);
-    $('#typing').textContent = names.length ? t('typing', names.join(', ')) : '';
+    const box = $('#typing'); box.textContent = '';
+    if (names.length) {
+      const dots = el('span', 'dots'); dots.append(el('i'), el('i'), el('i'));
+      box.append(dots, el('span', null, t('typing', names.join(', '))));
+    }
+    if (stick) toBottom();
   }
 
   // ---------- socket ----------
@@ -769,7 +800,7 @@
       const m = d.m, c = convs[m.conv] || (convs[m.conv] = { last: null, unread: 0 });
       c.last = m;
       if (cache[m.conv] && m.from !== me.id) { const sc = cache[m.conv].seen = cache[m.conv].seen || {}; if ((sc[m.from] || 0) < m.ts) sc[m.from] = m.ts; }
-      if (cache[m.conv] && !cache[m.conv].list.some(x => x.id === m.id)) cache[m.conv].list.push(m);
+      if (cache[m.conv] && !cache[m.conv].list.some(x => x.id === m.id)) { cache[m.conv].list.push(m); fresh.add(m.id); }
       if (typers[m.conv] && typers[m.conv][m.from]) { clearTimeout(typers[m.conv][m.from]); delete typers[m.conv][m.from]; }
       if (m.conv === current) {
         const wasStuck = stick || m.from === me.id;
@@ -798,6 +829,9 @@
       const c = cache[d.conv], x = c && c.list.find(y => y.id === d.id);
       if (x) { if (d.t === 'rx') { if (Object.keys(d.rx).length) x.rx = d.rx; else delete x.rx; } else x.game = d.game; }
       if (d.t === 'game' && convs[d.conv] && convs[d.conv].last && convs[d.conv].last.id === d.id) convs[d.conv].last.game = d.game;
+      if (d.conv === current) renderMsgs(true);
+    } else if (d.t === 'theme') {
+      if (cache[d.conv]) cache[d.conv].theme = d.key;
       if (d.conv === current) renderMsgs(true);
     } else if (d.t === 'seen') {
       const c = cache[d.conv]; if (!c) return;

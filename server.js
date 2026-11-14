@@ -31,6 +31,8 @@ let db = { users: {}, sessions: {}, invites: {} };
 if (fs.existsSync(DB_FILE)) db = Object.assign(db, JSON.parse(fs.readFileSync(DB_FILE, 'utf8')));
 for (const k of ['users', 'sessions', 'invites']) db[k] = Object.assign(Object.create(null), db[k]);
 db.settings = Object.assign({ invites: 'all' }, db.settings);
+db.themes = Object.assign(Object.create(null), db.themes); // chat id -> theme, shared by everyone in that chat
+const THEMES = ['forest', 'sakura', 'ocean', 'sunset', 'lavender', 'midnight', 'matcha', 'candy'];
 // the first account is the admin; sites created before admins existed promote their oldest account
 if (Object.keys(db.users).length && !Object.values(db.users).some(u => u.admin)) {
   Object.values(db.users).sort((a, b) => a.ts - b.ts)[0].admin = true;
@@ -489,7 +491,7 @@ async function route(req, res) {
     // how far each other member has read this chat, for "Seen"
     const seen = {};
     for (const uid of members(me.id, conv)) if (uid !== me.id && db.users[uid]) seen[uid] = (db.users[uid].read && db.users[uid].read[conv]) || 0;
-    return json(res, 200, { messages: a.slice(start, end).map(m => viewMsg(m, me.id)), more: start > 0, seen });
+    return json(res, 200, { messages: a.slice(start, end).map(m => viewMsg(m, me.id)), more: start > 0, seen, theme: db.themes[conv] || 'forest' });
   }
 
   if (p === '/api/translate' && req.method === 'POST') {
@@ -607,7 +609,7 @@ function onMessage(ws, d) {
     let o;
     if (d.t === 'edit') {
       const text = typeof d.text === 'string' ? d.text.replace(/\u0000/g, '').trim().slice(0, 4000) : '';
-      if (m.game || (!text && !m.img) || text === m.text) return;
+      if (m.game || m.sys || (!text && !m.img) || text === m.text) return;
       o = { op: 'edit', conv: d.conv, id: m.id, text, ts: Date.now() };
       for (const k of Object.keys(TR_LANGS)) delete tr[m.id + '|' + k]; saveTr(); // translate the new text afresh
     } else {
@@ -619,6 +621,17 @@ function onMessage(ws, d) {
     fs.appendFile(MSG_FILE, JSON.stringify(o) + '\n', err => { if (err) console.error('could not save change', err); });
     const a = convs.get(d.conv) || [];
     sendEach(who, uid => d.t === 'edit' ? { t: 'edit', m: viewMsg(m, uid) } : { t: 'del', conv: d.conv, id: m.id, last: viewMsg(a[a.length - 1] || null, uid) });
+  } else if (d.t === 'theme') {
+    if (d.conv === 'news' || !THEMES.includes(d.key) || (db.themes[d.conv] || 'forest') === d.key) return;
+    if (limited('th:' + me.id, 10, 60000)) return ws.send(JSON.stringify({ t: 'error', error: 'slow_down' }));
+    db.themes[d.conv] = d.key; save();
+    // a small line in the chat says who changed it, like Instagram
+    const m = { id: rid(9), conv: d.conv, from: me.id, text: '', ts: Date.now(), sys: { theme: d.key } };
+    list(d.conv).push(m);
+    fs.appendFile(MSG_FILE, JSON.stringify(m) + '\n', err => { if (err) console.error('could not save theme change', err); });
+    (me.read = me.read || {})[d.conv] = m.ts; save();
+    sendTo(who, { t: 'theme', conv: d.conv, key: d.key });
+    sendTo(who, { t: 'msg', m });
   } else if (d.t === 'react') {
     if (limited('rx:' + me.id, 40, 60000)) return;
     const m = (convs.get(d.conv) || []).find(x => x.id === d.id); if (!m) return;
