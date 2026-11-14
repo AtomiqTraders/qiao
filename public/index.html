@@ -95,6 +95,10 @@
         <button class="ghost" id="ctxClose" type="button" data-i18n="cancel"></button>
       </div>
       <form id="composer">
+        <button class="attach" id="gameBtn" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="7" width="19" height="11" rx="5.5"/><path d="M7.5 10.5v4M5.5 12.5h4"/><circle cx="15.5" cy="11.5" r=".9"/><circle cx="17.8" cy="13.8" r=".9"/></svg>
+          <span class="sr" data-i18n="game_btn"></span>
+        </button>
         <label class="attach" id="attachBtn">
           <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="14" rx="3"/><circle cx="9" cy="10" r="1.6"/><path d="M4.5 17l5-4.5 3.5 3 3-2.5 4 3.5"/></svg>
           <span class="sr" data-i18n="send_photo"></span>
@@ -125,6 +129,14 @@
   <div class="row">
     <button class="primary" id="saveLangs" type="button" data-i18n="save"></button>
     <button class="ghost" id="closeLangs" type="button" data-i18n="close"></button>
+  </div>
+</dialog>
+
+<dialog id="gameDlg">
+  <h2 data-i18n="game_btn"></h2>
+  <div class="game-choices">
+    <button class="game-choice" type="button" data-game="ttt"><span class="gc-art" aria-hidden="true">✕ ◯</span><span data-i18n="ttt"></span></button>
+    <button class="game-choice" type="button" data-game="rps"><span class="gc-art" aria-hidden="true">✊✋✌️</span><span data-i18n="rps"></span></button>
   </div>
 </dialog>
 

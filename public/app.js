@@ -33,6 +33,9 @@
       admin: 'Admin', removed_user: 'Removed member', err_forbidden: 'Only the admin can do that.',
       langs_btn: 'Languages', langs_title: 'Which languages can you read?',
       langs_body: 'Messages in any other language are translated for you.', save: 'Save',
+      game_btn: 'Play a game', ttt: 'Tic-tac-toe', rps: 'Rock paper scissors', your_turn: 'Your turn', their_turn: "{0}'s turn",
+      you_won: 'You won!', they_won: '{0} won', draw: "It's a draw", play_again: 'Play again', pick_one: 'Pick one',
+      waiting_pick: 'Waiting for {0} to pick', they_picked: '{0} has picked. Your move',
       sent: 'Sent', seen: 'Seen', seen_by: 'Seen by {0}', seen_all: 'Seen by everyone',
       reply: 'Reply', copy_text: 'Copy', edit: 'Edit', delete: 'Delete', delete_confirm: 'Tap again to delete', cancel: 'Cancel',
       replying_to: 'Replying to {0}', replying_self: 'Replying to yourself', editing: 'Editing message', edited: 'edited', copied_text: 'Copied', msg_deleted: 'Message was deleted',
@@ -76,6 +79,9 @@
       admin: '管理', removed_user: '已移除的成员', err_forbidden: '只有管理员可以这样做。',
       langs_btn: '语言设置', langs_title: '你能看懂哪些语言？',
       langs_body: '其他语言的消息会自动为你翻译。', save: '保存',
+      game_btn: '玩游戏', ttt: '井字棋', rps: '石头剪刀布', your_turn: '轮到你了', their_turn: '轮到 {0}',
+      you_won: '你赢了！', they_won: '{0} 赢了', draw: '平局', play_again: '再来一局', pick_one: '选一个',
+      waiting_pick: '等 {0} 出拳', they_picked: '{0} 已经出了，轮到你',
       sent: '已发送', seen: '已读', seen_by: '{0} 已读', seen_all: '所有人已读',
       reply: '回复', copy_text: '复制', edit: '编辑', delete: '删除', delete_confirm: '再点一次删除', cancel: '取消',
       replying_to: '回复 {0}', replying_self: '回复自己的消息', editing: '正在编辑消息', edited: '已编辑', copied_text: '已复制', msg_deleted: '消息已被删除',
@@ -266,8 +272,9 @@
   function preview(m) {
     if (!m) return '';
     const who = m.from === me.id ? t('you') + ': ' : (m.conv === 'lobby' && users.get(m.from) ? users.get(m.from).name + ': ' : '');
-    return who + (m.text || t('photo'));
+    return who + msgLabel(m);
   }
+  function msgLabel(m) { return m.text || (m.game ? '🎮 ' + t(m.game.kind || m.game) : t('photo')); }
   function roomRow(conv, title, sub, user) {
     const b = el('button', 'room'); b.type = 'button';
     if (conv === current) b.setAttribute('aria-current', 'true');
@@ -300,7 +307,11 @@
   }
 
   // ---------- messages ----------
+  $('#gameBtn').addEventListener('click', () => { if ($('#gameDlg').open) return; $('#gameDlg').showModal(); });
+  for (const b of document.querySelectorAll('#gameDlg [data-game]')) b.addEventListener('click', () => { $('#gameDlg').close(); startGame(b.dataset.game); });
+  $('#gameDlg').addEventListener('click', ev => { if (ev.target === $('#gameDlg')) $('#gameDlg').close(); });
   function renderHead() {
+    $('#gameBtn').hidden = current === 'lobby';
     const u = otherOf(current);
     $('#chatTitle').textContent = u ? u.name : t('lobby');
     $('#chatSub').textContent = u ? t(online.has(u.id) ? 'online' : 'offline') : t('lobby_sub');
@@ -327,7 +338,7 @@
   function quoteNode(re) {
     const q = el('button', 'quote'); q.type = 'button';
     if (re.gone) q.append(el('span', 'qtext', t('msg_deleted')));
-    else q.append(el('span', 'qwho', nameOf(re.from)), el('span', 'qtext', re.text || t('photo')));
+    else q.append(el('span', 'qwho', nameOf(re.from)), el('span', 'qtext', re.text || (re.game ? '🎮 ' + t(re.game) : t('photo'))));
     q.addEventListener('click', () => jumpTo(re.id));
     return q;
   }
@@ -348,8 +359,10 @@
       b.append(img);
     }
     if (m.text) { const s = el('span', 'body'); fillText(s, m.text); b.append(s); addTranslation(m, b); }
+    if (m.game) { b.classList.add('game-b'); b.append(gameNode(m)); }
     const hint = el('span', 'reply-hint'); hint.innerHTML = ICON.reply; hint.setAttribute('aria-hidden', 'true');
     wrap.append(hint, b);
+    if (m.rx && Object.keys(m.rx).length) wrap.append(rxNode(m));
     // the time shows once, under the last message of a run from the same person
     if (!sameRun(m, next) || m.edited) {
       const tm = el('time', null, sameRun(m, next) ? t('edited') : clock(m.ts) + (m.edited ? ' ' + t('edited') : ''));
@@ -358,6 +371,71 @@
     bindGestures(wrap, m);
     return wrap;
   }
+  // ---------- reactions ----------
+  const REACTS = ['❤️', '😂', '😮', '😢', '😡', '👍'];
+  const myReaction = m => (m.rx && Object.keys(m.rx).find(k => m.rx[k].includes(me.id))) || null;
+  function react(m, e) { if (!send({ t: 'react', conv: m.conv, id: m.id, e })) toast(t('not_sent')); }
+  function rxNode(m) {
+    const keys = Object.keys(m.rx).sort((a, b) => m.rx[b].length - m.rx[a].length);
+    const total = keys.reduce((n, k) => n + m.rx[k].length, 0);
+    const pill = el('button', 'rx' + (myReaction(m) ? ' mine-rx' : ''), keys.slice(0, 3).join('') + (total > 1 ? ' ' + total : ''));
+    pill.type = 'button';
+    pill.setAttribute('aria-label', keys.map(k => k + ' ' + m.rx[k].map(nameOf).join(', ')).join('; '));
+    pill.addEventListener('click', () => toast(keys.map(k => m.rx[k].map(nameOf).join(', ') + ' ' + k).join('   '), 4000));
+    return pill;
+  }
+
+  // ---------- games ----------
+  const RPS = { r: '✊', p: '✋', s: '✌️' };
+  function gameNode(m) {
+    const g = m.game, box = el('div', 'game'), other = id => nameOf(id);
+    box.append(el('div', 'game-title', '🎮 ' + t(g.kind)));
+    let status = '', done = false;
+    if (g.kind === 'ttt') {
+      const grid = el('div', 'ttt');
+      const myTurn = g.turn === me.id && !g.winner;
+      for (let i = 0; i < 9; i++) {
+        const c = g.board[i], cell = el('button', 'cell' + (c === 'X' ? ' x' : c === 'O' ? ' o' : '') + (g.line && g.line.includes(i) ? ' win' : ''), c === 'X' ? '✕' : c === 'O' ? '◯' : '');
+        cell.type = 'button'; cell.disabled = !myTurn || c !== '.';
+        cell.setAttribute('aria-label', String(i + 1) + (c === '.' ? '' : ' ' + c));
+        cell.addEventListener('click', () => { if (!send({ t: 'move', conv: m.conv, id: m.id, cell: i })) toast(t('not_sent')); });
+        grid.append(cell);
+      }
+      box.append(grid);
+      done = !!g.winner;
+      if (g.winner === 'draw') status = t('draw');
+      else if (g.winner) status = g.winner === me.id ? t('you_won') : t('they_won', other(g.winner));
+      else status = g.turn === me.id ? t('your_turn') : t('their_turn', other(g.turn));
+    } else if (g.kind === 'rps') {
+      const opp = g.players.find(x => x !== me.id), mine = g.picks[me.id], theirs = g.picks[opp];
+      done = g.done;
+      if (g.done) {
+        box.append(el('div', 'rps-result', RPS[mine] + '  vs  ' + RPS[theirs]));
+        status = g.winner === 'draw' ? t('draw') : g.winner === me.id ? t('you_won') : t('they_won', other(g.winner));
+      } else if (mine) {
+        box.append(el('div', 'rps-result', RPS[mine]));
+        status = t('waiting_pick', other(opp));
+      } else {
+        const row = el('div', 'rps');
+        for (const k of Object.keys(RPS)) {
+          const b = el('button', 'rps-pick', RPS[k]); b.type = 'button';
+          b.addEventListener('click', () => { if (!send({ t: 'move', conv: m.conv, id: m.id, pick: k })) toast(t('not_sent')); });
+          row.append(b);
+        }
+        box.append(row);
+        status = theirs ? t('they_picked', other(opp)) : t('pick_one');
+      }
+    }
+    box.append(el('div', 'game-status' + (status === t('your_turn') || status === t('you_won') ? ' hot' : ''), status));
+    if (done) {
+      const again = el('button', 'sbtn again', t('play_again')); again.type = 'button';
+      again.addEventListener('click', () => startGame(g.kind, m.conv));
+      box.append(again);
+    }
+    return box;
+  }
+  function startGame(kind, conv) { if (!send({ t: 'send', conv: conv || current, game: kind })) toast(t('not_sent')); else stick = true; }
+
   function jumpTo(id) {
     const n = document.querySelector('#msgList .msg[data-id="' + CSS.escape(id) + '"]'); if (!n) return;
     n.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
@@ -366,6 +444,7 @@
 
   // Swipe a message toward the middle to reply; hold it (or right-click with a mouse) for the menu.
   const SWIPE = 56;
+  let lastHeart = 0;
   function bindGestures(node, m) {
     const dir = m.from === me.id ? -1 : 1;
     let sx = 0, sy = 0, dx = 0, pid = null, mode = null, timer = null;
@@ -391,11 +470,18 @@
       if (armed && !node.classList.contains('armed') && navigator.vibrate) navigator.vibrate(8);
       node.classList.toggle('armed', armed);
     });
+    const interactive = target => target.closest && target.closest('img, button, a, .game');
     const end = ev => {
       if (ev.pointerId !== pid) return;
       if (mode === 'swipe') { node.dataset.suppress = '1'; if (dx >= SWIPE) startReply(m); }
+      if (mode === null && ev.type === 'pointerup' && !interactive(ev.target)) { // double tap = ❤️
+        const now = Date.now();
+        if (now - (node._tap || 0) < 320) { node._tap = 0; heart(); } else node._tap = now;
+      }
       reset(); pid = null; mode = null;
     };
+    const heart = () => { lastHeart = Date.now(); if (myReaction(m) !== '❤️') react(m, '❤️'); else react(m, null); if (navigator.vibrate) navigator.vibrate(10); };
+    node.addEventListener('dblclick', ev => { if (Date.now() - lastHeart < 700 || interactive(ev.target)) return; ev.preventDefault(); heart(); });
     node.addEventListener('pointerup', end);
     node.addEventListener('pointercancel', end);
     node.addEventListener('contextmenu', ev => { ev.preventDefault(); clearTimeout(timer); timer = null; if (mode !== 'swipe') { mode = 'hold'; openSheet(m); } });
@@ -414,7 +500,7 @@
   function openSheet(m) {
     const dlg = $('#msgSheet'); if (dlg.open) return;
     const box = $('#sheetActs'); box.textContent = '';
-    $('#sheetPreview').textContent = m.text || t('photo');
+    $('#sheetPreview').textContent = msgLabel(m);
     const act = (icon, label, fn, cls) => {
       const b = el('button', 'sheet-act' + (cls ? ' ' + cls : '')); b.type = 'button';
       const ic = el('span'); ic.innerHTML = icon; ic.setAttribute('aria-hidden', 'true');
@@ -423,6 +509,13 @@
       box.append(b);
     };
     const mine = m.from === me.id;
+    const row = el('div', 'rx-row'), cur = myReaction(m);
+    for (const e of REACTS) {
+      const b = el('button', 'rx-pick' + (e === cur ? ' on' : ''), e); b.type = 'button';
+      b.addEventListener('click', () => { if (Date.now() - sheetAt < 450) return; dlg.close(); react(m, e); });
+      row.append(b);
+    }
+    box.append(row);
     act(ICON.reply, t('reply'), () => { dlg.close(); startReply(m); });
     if (m.text) act(ICON.copy, t('copy_text'), async () => {
       dlg.close();
@@ -449,7 +542,7 @@
     const btn = $('#sendBtn'); btn.dataset.i18n = editing ? 'save' : 'send'; btn.textContent = t(btn.dataset.i18n);
     if (!on) return;
     $('#ctxLabel').textContent = editing ? t('editing') : (replyTo.from === me.id ? t('replying_self') : t('replying_to', nameOf(replyTo.from)));
-    $('#ctxSnip').textContent = (editing || replyTo).text || t('photo');
+    $('#ctxSnip').textContent = msgLabel(editing || replyTo);
   }
   function startReply(m) { if (editing) input.value = ''; editing = null; replyTo = m; showCtx(); grow(); input.focus(); }
   function startEdit(m) { replyTo = null; editing = m; input.value = m.text; showCtx(); grow(); input.focus(); input.setSelectionRange(input.value.length, input.value.length); }
@@ -691,6 +784,11 @@
       if ((replyTo && replyTo.id === id) || (editing && editing.id === id && d.t === 'del')) cancelCtx();
       if (conv === current) renderMsgs(true);
       renderSide();
+    } else if (d.t === 'rx' || d.t === 'game') {
+      const c = cache[d.conv], x = c && c.list.find(y => y.id === d.id);
+      if (x) { if (d.t === 'rx') { if (Object.keys(d.rx).length) x.rx = d.rx; else delete x.rx; } else x.game = d.game; }
+      if (d.t === 'game' && convs[d.conv] && convs[d.conv].last && convs[d.conv].last.id === d.id) convs[d.conv].last.game = d.game;
+      if (d.conv === current) renderMsgs(true);
     } else if (d.t === 'seen') {
       const c = cache[d.conv]; if (!c) return;
       c.seen = c.seen || {}; if ((c.seen[d.uid] || 0) < d.ts) c.seen[d.uid] = d.ts;

@@ -54,13 +54,23 @@ if (fs.existsSync(MSG_FILE)) {
 function list(conv) { let a = convs.get(conv); if (!a) convs.set(conv, a = []); return a; }
 // Edits and deletes are stored as extra lines in the same file and replayed in order on start.
 // A reply keeps a short copy of the message it answers (re), kept in step here.
-function snippet(m) { return { id: m.id, from: m.from, text: [...(m.text || '')].slice(0, 140).join(''), img: !!m.img }; }
+function snippet(m) { const r = { id: m.id, from: m.from, text: [...(m.text || '')].slice(0, 140).join(''), img: !!m.img }; if (m.game) r.game = m.game.kind; return r; }
+const REACTS = ['❤️', '😂', '😮', '😢', '😡', '👍'];
+// one reaction per person per message; e === null takes theirs away
+function setReaction(m, uid, e) {
+  const rx = m.rx || {};
+  for (const k of Object.keys(rx)) { rx[k] = rx[k].filter(x => x !== uid); if (!rx[k].length) delete rx[k]; }
+  if (e) (rx[e] = rx[e] || []).push(uid);
+  if (Object.keys(rx).length) m.rx = rx; else delete m.rx;
+}
 function applyOp(o) {
   const a = convs.get(o.conv); if (!a) return null;
   const i = a.findIndex(x => x.id === o.id); if (i < 0) return null;
   const m = a[i];
   if (o.op === 'edit') { m.text = o.text; m.edited = o.ts; }
   else if (o.op === 'del') a.splice(i, 1);
+  else if (o.op === 'react') { setReaction(m, o.uid, o.e); return m; }
+  else if (o.op === 'game') { m.game = o.game; return m; }
   for (const x of a) if (x.re && x.re.id === o.id) x.re = o.op === 'del' ? { id: o.id, gone: true } : snippet(m);
   return m;
 }
@@ -152,7 +162,7 @@ const VAPID_FILE = path.join(DATA, 'vapid.json');
 let vapid;
 try { vapid = JSON.parse(fs.readFileSync(VAPID_FILE, 'utf8')); } catch { vapid = webpush.generateVAPIDKeys(); fs.writeFileSync(VAPID_FILE, JSON.stringify(vapid), { mode: 0o600 }); }
 webpush.setVapidDetails(process.env.PUSH_CONTACT || 'mailto:admin@qiao.invalid', vapid.publicKey, vapid.privateKey);
-const PUSH_WORDS = { photo: { en: 'Photo', zh: '图片', hi: 'फ़ोटो', vi: 'Ảnh', ja: '写真', ko: '사진' }, lobby: { en: 'Lobby', zh: '大厅', hi: 'लॉबी', vi: 'Sảnh chung', ja: 'ロビー', ko: '로비' } };
+const PUSH_WORDS = { game: { en: 'Wants to play', zh: '邀请你玩游戏', hi: 'खेलना चाहते हैं', vi: 'Muốn chơi cùng bạn', ja: 'ゲームに誘っています', ko: '게임을 하자고 해요' }, turn: { en: 'Your turn', zh: '轮到你了', hi: 'आपकी बारी', vi: 'Đến lượt bạn', ja: 'あなたの番です', ko: '내 차례' }, photo: { en: 'Photo', zh: '图片', hi: 'फ़ोटो', vi: 'Ảnh', ja: '写真', ko: '사진' }, lobby: { en: 'Lobby', zh: '大厅', hi: 'लॉबी', vi: 'Sảnh chung', ja: 'ロビー', ko: '로비' } };
 function validSub(x) {
   if (!x || typeof x !== 'object' || typeof x.endpoint !== 'string' || x.endpoint.length > 1000 || !x.keys || typeof x.keys !== 'object') return null;
   let u; try { u = new URL(x.endpoint); } catch { return null; }
@@ -161,13 +171,13 @@ function validSub(x) {
   if (typeof p256dh !== 'string' || typeof auth !== 'string' || !/^[\w-]{20,200}$/.test(p256dh) || !/^[\w-]{8,100}$/.test(auth)) return null;
   return { endpoint: x.endpoint, keys: { p256dh, auth } };
 }
-async function pushTo(u, m) {
+async function pushTo(u, m, override) {
   if (!u.push || !u.push.length) return;
   const lang = u.lang || 'en';
   const sender = db.users[m.from];
   const title = (sender ? sender.name : '?') + (m.conv === 'lobby' ? ' · ' + PUSH_WORDS.lobby[lang] : '');
-  let body = m.text || PUSH_WORDS.photo[lang];
-  if (m.text) { try { const t = await Promise.race([translateFor(u, m), new Promise(r => setTimeout(() => r(null), 4000))]); if (t) body = t; } catch { /* send the original */ } }
+  let body = override ? '🎮 ' + PUSH_WORDS[override][lang] : m.text || (m.game ? '🎮 ' + PUSH_WORDS.game[lang] : PUSH_WORDS.photo[lang]);
+  if (m.text && !override) { try { const t = await Promise.race([translateFor(u, m), new Promise(r => setTimeout(() => r(null), 4000))]); if (t) body = t; } catch { /* send the original */ } }
   const payload = JSON.stringify({ title, body: [...body].slice(0, 180).join(''), conv: m.conv });
   for (const sub of [...u.push]) {
     webpush.sendNotification(sub, payload, { TTL: 86400, urgency: 'high', topic: m.conv.replace(/[^\w-]/g, '').slice(-32) }).catch(e => {
@@ -266,12 +276,52 @@ function members(uid, conv) {
   if (a === b || (a !== uid && b !== uid) || !db.users[a] || !db.users[b] || dmId(a, b) !== conv) return null;
   return [a, b];
 }
+function viewMsg(m, uid) {
+  if (!m || !m.game || m.game.kind !== 'rps' || m.game.done) return m;
+  const picks = {};
+  for (const k of Object.keys(m.game.picks)) picks[k] = k === uid ? m.game.picks[k] : '?';
+  return { ...m, game: { ...m.game, picks } };
+}
+function sendEach(uids, make) {
+  for (const uid of uids) { const s = JSON.stringify(make(uid)); for (const ws of sockets.get(uid) || []) if (ws.readyState === 1) ws.send(s); }
+}
+// ---- games ----
+const LINES = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6]];
+const BEATS = { r: 's', p: 'r', s: 'p' };
+function newGame(kind, me, other) {
+  if (kind === 'ttt') return { kind, x: me, o: other, board: '.........', turn: me, winner: null, line: null };
+  if (kind === 'rps') return { kind, players: [me, other], picks: {}, done: false, winner: null };
+  return null;
+}
+function playMove(g, uid, d) { // returns the new state, or null if the move is not allowed
+  if (g.kind === 'ttt') {
+    const cell = d.cell;
+    if (g.winner || g.turn !== uid || !Number.isInteger(cell) || cell < 0 || cell > 8 || g.board[cell] !== '.') return null;
+    const mark = uid === g.x ? 'X' : 'O';
+    const n = { ...g, board: g.board.slice(0, cell) + mark + g.board.slice(cell + 1), turn: uid === g.x ? g.o : g.x };
+    const line = LINES.find(l => l.every(i => n.board[i] === mark));
+    if (line) { n.winner = uid; n.line = line; n.turn = null; }
+    else if (!n.board.includes('.')) { n.winner = 'draw'; n.turn = null; }
+    return n;
+  }
+  if (g.kind === 'rps') {
+    if (g.done || !g.players.includes(uid) || g.picks[uid] || !Object.prototype.hasOwnProperty.call(BEATS, d.pick)) return null;
+    const n = { ...g, picks: { ...g.picks, [uid]: d.pick } };
+    if (Object.keys(n.picks).length === 2) {
+      const [a, b] = n.players, pa = n.picks[a], pb = n.picks[b];
+      n.done = true; n.winner = pa === pb ? 'draw' : BEATS[pa] === pb ? a : b;
+    }
+    return n;
+  }
+  return null;
+}
+
 function summary(u, conv) {
   const a = convs.get(conv) || [];
   const read = (u.read && u.read[conv]) || 0;
   let unread = 0;
   for (let i = a.length - 1; i >= 0 && a[i].ts > read; i--) if (a[i].from !== u.id) unread++;
-  return { last: a[a.length - 1] || null, unread };
+  return { last: viewMsg(a[a.length - 1] || null, u.id), unread };
 }
 function validInvite(code) {
   const inv = db.invites[String(code || '')];
@@ -439,7 +489,7 @@ async function route(req, res) {
     // how far each other member has read this chat, for "Seen"
     const seen = {};
     for (const uid of members(me.id, conv)) if (uid !== me.id && db.users[uid]) seen[uid] = (db.users[uid].read && db.users[uid].read[conv]) || 0;
-    return json(res, 200, { messages: a.slice(start, end), more: start > 0, seen });
+    return json(res, 200, { messages: a.slice(start, end).map(m => viewMsg(m, me.id)), more: start > 0, seen });
   }
 
   if (p === '/api/translate' && req.method === 'POST') {
@@ -537,9 +587,11 @@ function onMessage(ws, d) {
     if (limited('ms:' + me.id, 25, 10000)) return ws.send(JSON.stringify({ t: 'error', error: 'slow_down', cid: d.cid }));
     const text = typeof d.text === 'string' ? d.text.replace(/\u0000/g, '').trim().slice(0, 4000) : '';
     const img = typeof d.img === 'string' && UPLOAD_RE.test(d.img) && fs.existsSync(path.join(UP, d.img)) ? d.img : null;
-    if (!text && !img) return;
-    const m = { id: rid(9), conv: d.conv, from: me.id, text, ts: Date.now() };
-    if (img) m.img = img;
+    const game = d.game && d.conv !== 'lobby' ? newGame(d.game, me.id, who.find(x => x !== me.id)) : null; // games are for one-to-one chats
+    if (!text && !img && !game) return;
+    const m = { id: rid(9), conv: d.conv, from: me.id, text: game ? '' : text, ts: Date.now() };
+    if (img && !game) m.img = img;
+    if (game) m.game = game;
     if (typeof d.reply === 'string') { const o = (convs.get(d.conv) || []).find(x => x.id === d.reply); if (o) m.re = snippet(o); }
     list(d.conv).push(m);
     fs.appendFile(MSG_FILE, JSON.stringify(m) + '\n', err => { if (err) console.error('could not save message', err); });
@@ -554,7 +606,7 @@ function onMessage(ws, d) {
     let o;
     if (d.t === 'edit') {
       const text = typeof d.text === 'string' ? d.text.replace(/\u0000/g, '').trim().slice(0, 4000) : '';
-      if ((!text && !m.img) || text === m.text) return;
+      if (m.game || (!text && !m.img) || text === m.text) return;
       o = { op: 'edit', conv: d.conv, id: m.id, text, ts: Date.now() };
       for (const k of Object.keys(TR_LANGS)) delete tr[m.id + '|' + k]; saveTr(); // translate the new text afresh
     } else {
@@ -565,7 +617,28 @@ function onMessage(ws, d) {
     applyOp(o);
     fs.appendFile(MSG_FILE, JSON.stringify(o) + '\n', err => { if (err) console.error('could not save change', err); });
     const a = convs.get(d.conv) || [];
-    sendTo(who, d.t === 'edit' ? { t: 'edit', m } : { t: 'del', conv: d.conv, id: m.id, last: a[a.length - 1] || null });
+    sendEach(who, uid => d.t === 'edit' ? { t: 'edit', m: viewMsg(m, uid) } : { t: 'del', conv: d.conv, id: m.id, last: viewMsg(a[a.length - 1] || null, uid) });
+  } else if (d.t === 'react') {
+    if (limited('rx:' + me.id, 40, 60000)) return;
+    const m = (convs.get(d.conv) || []).find(x => x.id === d.id); if (!m) return;
+    if (d.e !== null && !REACTS.includes(d.e)) return;
+    const had = m.rx && Object.keys(m.rx).find(k => m.rx[k].includes(me.id));
+    const e = d.e && d.e !== had ? d.e : null; // tapping the same reaction again takes it away
+    const o = { op: 'react', conv: d.conv, id: m.id, uid: me.id, e };
+    applyOp(o);
+    fs.appendFile(MSG_FILE, JSON.stringify(o) + '\n', err => { if (err) console.error('could not save reaction', err); });
+    sendTo(who, { t: 'rx', conv: d.conv, id: m.id, rx: m.rx || {} });
+  } else if (d.t === 'move') {
+    if (limited('mv:' + me.id, 60, 60000)) return;
+    const m = (convs.get(d.conv) || []).find(x => x.id === d.id); if (!m || !m.game) return;
+    const g = playMove(m.game, me.id, d); if (!g) return;
+    const o = { op: 'game', conv: d.conv, id: m.id, game: g };
+    applyOp(o);
+    fs.appendFile(MSG_FILE, JSON.stringify(o) + '\n', err => { if (err) console.error('could not save move', err); });
+    sendEach(who, uid => ({ t: 'game', conv: d.conv, id: m.id, game: viewMsg(m, uid).game }));
+    const other = who.find(x => x !== me.id);
+    const waiting = g.kind === 'ttt' ? g.turn === other : !g.done && !g.picks[other];
+    if (other && db.users[other] && waiting && !looking(other)) pushTo(db.users[other], m, 'turn').catch(() => {});
   } else if (d.t === 'typing') {
     if (!limited('ty:' + me.id, 10, 10000)) sendTo(who, { t: 'typing', conv: d.conv, from: me.id }, ws);
   } else if (d.t === 'read') {

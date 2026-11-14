@@ -238,3 +238,38 @@ a.ghost { padding: 8px 12px; border-radius: 999px; text-decoration: none; font-s
 
 .msg .status { font-size: .6875rem; color: var(--soft); text-align: right; margin: 0 12px 4px; }
 .msg .status.seen { color: var(--candle); }
+
+/* ----- reactions ----- */
+.rx { position: relative; z-index: 1; display: inline-block; margin: -10px 10px 0; padding: 2px 8px; border-radius: 999px; background: var(--panel); border: 1px solid var(--line); font-size: .875rem; line-height: 1.5; color: var(--ink); }
+.msg.mine .rx { float: right; }
+.msg.mine .rx + time, .msg.mine .rx ~ .status { clear: both; }
+.rx.mine-rx { border-color: var(--candle); }
+.rx-row { display: flex; justify-content: space-around; padding: 6px 4px 10px; border-bottom: 1px solid var(--line); margin-bottom: 6px; }
+.rx-pick { font-size: 1.75rem; line-height: 1; padding: 8px; border-radius: 50%; }
+.rx-pick:hover { background: var(--raise); }
+.rx-pick.on { background: var(--raise); box-shadow: 0 0 0 2px var(--candle); }
+.attach[hidden] { display: none; }
+#gameBtn { padding: 11px 6px; }
+/* ----- games ----- */
+.msg.mine .bubble.game-b, .bubble.game-b { background: var(--raise); color: var(--ink); border: 1px solid var(--line); padding: 12px 14px; }
+.game { display: grid; gap: 10px; justify-items: center; min-width: 210px; }
+.game-title { font-weight: 600; font-size: .9375rem; justify-self: start; }
+.ttt { display: grid; grid-template-columns: repeat(3, 60px); grid-template-rows: repeat(3, 60px); gap: 6px; }
+.cell { padding: 0; border-radius: 12px; background: var(--bg); font-size: 1.75rem; font-weight: 700; color: var(--ink); }
+.cell:not(:disabled):hover { box-shadow: inset 0 0 0 2px var(--candle); }
+.cell:disabled { cursor: default; }
+.cell.x { color: var(--candle); }
+.cell.o { color: #8fb8f0; }
+.cell.win { background: var(--candle); color: var(--candle-ink); }
+.rps { display: flex; gap: 10px; }
+.rps-pick { font-size: 2rem; width: 62px; height: 62px; border-radius: 16px; background: var(--bg); padding: 0; }
+.rps-pick:hover { box-shadow: inset 0 0 0 2px var(--candle); }
+.rps-result { font-size: 2.25rem; letter-spacing: .05em; white-space: pre; }
+.game-status { color: var(--soft); font-size: .9375rem; text-align: center; }
+.game-status.hot { color: var(--candle); font-weight: 600; }
+.again { justify-self: center; }
+#gameDlg h2 { margin-bottom: 14px; }
+.game-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.game-choice { display: grid; gap: 8px; justify-items: center; padding: 18px 10px; border-radius: 18px; background: var(--bg); border: 1px solid var(--line); color: var(--ink); text-align: center; }
+.game-choice:hover { border-color: var(--candle); }
+.gc-art { font-size: 1.75rem; }
