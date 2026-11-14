@@ -3,6 +3,7 @@
    Any key missing here falls back to English. */
 window.QIAO_I18N = {
   hi: {
+    th_custom: 'एक फ़ोटो', th_upload: 'अपनी फ़ोटो',
     theme_btn: 'चैट थीम', theme_body: 'इस चैट में सबको दिखेगी।', theme_changed: '{0} ने थीम बदलकर {1} कर दी', th_forest: 'जंगल', th_sakura: 'सकुरा', th_ocean: 'समंदर', th_sunset: 'सूर्यास्त', th_lavender: 'लैवेंडर', th_midnight: 'आधी रात', th_matcha: 'माचा', th_candy: 'कैंडी',
     news: 'घोषणाएँ', news_sub: 'अपडेट और खबरें', news_readonly: 'यहाँ सिर्फ़ एडमिन पोस्ट कर सकता है',
     game_btn: 'गेम खेलें', ttt: 'टिक-टैक-टो', rps: 'पत्थर कागज़ कैंची', your_turn: 'आपकी बारी', their_turn: '{0} की बारी', you_won: 'आप जीत गए!', they_won: '{0} जीत गए', draw: 'बराबरी', play_again: 'फिर से खेलें', pick_one: 'एक चुनें', waiting_pick: '{0} के चुनने का इंतज़ार', they_picked: '{0} ने चुन लिया। अब आपकी बारी',
@@ -49,6 +50,7 @@ window.QIAO_I18N = {
     err_server: 'सर्वर में कुछ गड़बड़ हुई। फिर कोशिश करें।'
   },
   vi: {
+    th_custom: 'một bức ảnh', th_upload: 'Ảnh của bạn',
     theme_btn: 'Chủ đề trò chuyện', theme_body: 'Mọi người trong cuộc trò chuyện đều thấy.', theme_changed: '{0} đã đổi chủ đề thành {1}', th_forest: 'Rừng', th_sakura: 'Hoa anh đào', th_ocean: 'Đại dương', th_sunset: 'Hoàng hôn', th_lavender: 'Oải hương', th_midnight: 'Nửa đêm', th_matcha: 'Matcha', th_candy: 'Kẹo ngọt',
     news: 'Thông báo', news_sub: 'Cập nhật và tin tức', news_readonly: 'Chỉ quản trị viên mới đăng được ở đây',
     game_btn: 'Chơi trò chơi', ttt: 'Cờ ca-rô', rps: 'Oẳn tù tì', your_turn: 'Đến lượt bạn', their_turn: 'Đến lượt {0}', you_won: 'Bạn thắng!', they_won: '{0} thắng', draw: 'Hòa', play_again: 'Chơi lại', pick_one: 'Chọn một', waiting_pick: 'Đang chờ {0} chọn', they_picked: '{0} đã chọn. Đến lượt bạn',
@@ -95,6 +97,7 @@ window.QIAO_I18N = {
     err_server: 'Máy chủ gặp lỗi. Hãy thử lại.'
   },
   ja: {
+    th_custom: '写真', th_upload: '自分の写真',
     theme_btn: 'チャットのテーマ', theme_body: 'このチャットの全員に表示されます。', theme_changed: '{0} さんがテーマを{1}に変更しました', th_forest: '森', th_sakura: '桜', th_ocean: '海', th_sunset: '夕焼け', th_lavender: 'ラベンダー', th_midnight: '真夜中', th_matcha: '抹茶', th_candy: 'キャンディ',
     news: 'お知らせ', news_sub: 'アップデートとお知らせ', news_readonly: 'ここに投稿できるのは管理者だけです',
     game_btn: 'ゲームで遊ぶ', ttt: '三目並べ', rps: 'じゃんけん', your_turn: 'あなたの番です', their_turn: '{0} さんの番です', you_won: 'あなたの勝ち！', they_won: '{0} さんの勝ち', draw: '引き分け', play_again: 'もう一回', pick_one: '一つ選んでください', waiting_pick: '{0} さんが選ぶのを待っています', they_picked: '{0} さんは選びました。あなたの番です',
@@ -141,6 +144,7 @@ window.QIAO_I18N = {
     err_server: 'サーバーで問題が起きました。もう一度お試しください。'
   },
   ko: {
+    th_custom: '사진', th_upload: '내 사진',
     theme_btn: '채팅 테마', theme_body: '이 채팅의 모두에게 보여요.', theme_changed: '{0} 님이 테마를 {1}(으)로 바꿨어요', th_forest: '숲', th_sakura: '벚꽃', th_ocean: '바다', th_sunset: '노을', th_lavender: '라벤더', th_midnight: '한밤', th_matcha: '말차', th_candy: '캔디',
     news: '공지', news_sub: '업데이트와 소식', news_readonly: '관리자만 글을 쓸 수 있어요',
     game_btn: '게임하기', ttt: '틱택토', rps: '가위바위보', your_turn: '내 차례', their_turn: '{0} 님 차례', you_won: '내가 이겼어요!', they_won: '{0} 님이 이겼어요', draw: '무승부', play_again: '다시 하기', pick_one: '하나 고르세요', waiting_pick: '{0} 님이 고르기를 기다리는 중', they_picked: '{0} 님이 골랐어요. 내 차례',

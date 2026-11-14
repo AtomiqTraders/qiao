@@ -622,15 +622,25 @@ function onMessage(ws, d) {
     const a = convs.get(d.conv) || [];
     sendEach(who, uid => d.t === 'edit' ? { t: 'edit', m: viewMsg(m, uid) } : { t: 'del', conv: d.conv, id: m.id, last: viewMsg(a[a.length - 1] || null, uid) });
   } else if (d.t === 'theme') {
-    if (d.conv === 'news' || !THEMES.includes(d.key) || (db.themes[d.conv] || 'forest') === d.key) return;
+    if (d.conv === 'news') return;
+    let val; // a built-in theme name, or { key: 'custom', img, accent } for a photo someone uploaded
+    if (d.key === 'custom') {
+      if (typeof d.img !== 'string' || !UPLOAD_RE.test(d.img) || !fs.existsSync(path.join(UP, d.img)) || !/^#[0-9a-f]{6}$/i.test(d.accent || '')) return;
+      val = { key: 'custom', img: d.img, accent: d.accent.toLowerCase() };
+    } else {
+      if (!THEMES.includes(d.key) || (db.themes[d.conv] || 'forest') === d.key) return;
+      val = d.key;
+    }
     if (limited('th:' + me.id, 10, 60000)) return ws.send(JSON.stringify({ t: 'error', error: 'slow_down' }));
-    db.themes[d.conv] = d.key; save();
+    const old = db.themes[d.conv];
+    if (old && old.img && old.img !== val.img) fs.unlink(path.join(UP, old.img), () => {}); // the replaced photo is no longer used
+    db.themes[d.conv] = val; save();
     // a small line in the chat says who changed it, like Instagram
     const m = { id: rid(9), conv: d.conv, from: me.id, text: '', ts: Date.now(), sys: { theme: d.key } };
     list(d.conv).push(m);
     fs.appendFile(MSG_FILE, JSON.stringify(m) + '\n', err => { if (err) console.error('could not save theme change', err); });
     (me.read = me.read || {})[d.conv] = m.ts; save();
-    sendTo(who, { t: 'theme', conv: d.conv, key: d.key });
+    sendTo(who, { t: 'theme', conv: d.conv, theme: val });
     sendTo(who, { t: 'msg', m });
   } else if (d.t === 'react') {
     if (limited('rx:' + me.id, 40, 60000)) return;

@@ -43,5 +43,14 @@
     "vi": "🎨 Chủ đề trò chuyện\nBấm vào bảng màu ở đầu cuộc trò chuyện để chọn chủ đề: Hoa anh đào, Đại dương, Hoàng hôn, Oải hương, Nửa đêm, Matcha, Kẹo ngọt hoặc Rừng. Mọi người trong cuộc trò chuyện đều thấy. Bong bóng tin nhắn tròn hơn, tin nhắn mới hiện ra nhẹ nhàng, và khi ai đó đang gõ sẽ có những chấm nhỏ.",
     "ja": "🎨 チャットのテーマ\nチャット上部のパレットからテーマを選べます：桜、海、夕焼け、ラベンダー、真夜中、抹茶、キャンディ、森。チャットの全員に同じテーマが表示されます。吹き出しも丸くなり、新しいメッセージはふわっと表示され、入力中は小さな点が動きます。",
     "ko": "🎨 채팅 테마\n채팅 위쪽의 팔레트를 누르면 테마를 고를 수 있어요: 벚꽃, 바다, 노을, 라벤더, 한밤, 말차, 캔디, 숲. 채팅의 모두에게 같은 테마가 보여요. 말풍선도 더 동글해지고, 새 메시지는 톡 하고 나타나며, 입력 중일 때는 작은 점이 움직여요."
+  },
+  {
+    "id": "2026-11-15-photo-theme",
+    "en": "🖼️ Your own chat theme\nIn the theme picker, tap Your photo and choose any picture. It becomes the chat background for everyone in that chat, and the bubble colour is picked from the photo.",
+    "zh": "🖼️ 自定义聊天主题\n在主题选择里点“自己的照片”，选一张喜欢的图片。它会变成这个聊天里每个人的背景，气泡颜色也会根据照片自动搭配。",
+    "hi": "🖼️ अपनी चैट थीम\nथीम चुनते समय “अपनी फ़ोटो” दबाएँ और कोई भी तस्वीर चुनें। वह उस चैट में सबके लिए बैकग्राउंड बन जाएगी, और बबल का रंग फ़ोटो से चुना जाएगा।",
+    "vi": "🖼️ Chủ đề của riêng bạn\nTrong phần chọn chủ đề, bấm “Ảnh của bạn” và chọn một bức ảnh bất kỳ. Ảnh sẽ thành nền trò chuyện cho mọi người trong cuộc trò chuyện đó, và màu bong bóng được lấy theo ảnh.",
+    "ja": "🖼️ オリジナルのテーマ\nテーマ選択で「自分の写真」をタップして、好きな画像を選んでください。そのチャットの全員の背景になり、吹き出しの色も写真に合わせて選ばれます。",
+    "ko": "🖼️ 나만의 채팅 테마\n테마 선택에서 ‘내 사진’을 누르고 원하는 사진을 고르세요. 그 채팅의 모두에게 배경이 되고, 말풍선 색은 사진에 맞춰 골라져요."
   }
 ]

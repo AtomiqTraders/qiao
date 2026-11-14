@@ -21,6 +21,7 @@
       pick_chat: 'Pick a conversation to start talking.',
       lobby: 'Lobby', lobby_sub: 'Everyone here', people: 'People',
       theme_btn: 'Chat theme', theme_body: 'Everyone in this chat sees it.', theme_changed: '{0} changed the theme to {1}',
+      th_custom: 'a photo', th_upload: 'Your photo',
       th_forest: 'Forest', th_sakura: 'Sakura', th_ocean: 'Ocean', th_sunset: 'Sunset', th_lavender: 'Lavender', th_midnight: 'Midnight', th_matcha: 'Matcha', th_candy: 'Candy',
       news: 'Announcements', news_sub: 'Updates and news', news_readonly: 'Only the admin can post here',
       nobody: 'Nobody else is here yet. Invite a friend.',
@@ -70,6 +71,7 @@
       pick_chat: '选择一个对话开始聊天。',
       lobby: '大厅', lobby_sub: '所有人', people: '朋友',
       theme_btn: '聊天主题', theme_body: '聊天里的每个人都会看到。', theme_changed: '{0} 把主题换成了{1}',
+      th_custom: '一张照片', th_upload: '自己的照片',
       th_forest: '森林', th_sakura: '樱花', th_ocean: '海洋', th_sunset: '日落', th_lavender: '薰衣草', th_midnight: '午夜', th_matcha: '抹茶', th_candy: '糖果',
       news: '公告', news_sub: '更新和消息', news_readonly: '只有管理员可以在这里发言',
       nobody: '这里还没有其他人，邀请一位朋友吧。',
@@ -282,7 +284,51 @@
     return who + msgLabel(m);
   }
   const THEMES = { forest: '🌲', sakura: '🌸', ocean: '🌊', sunset: '🌅', lavender: '💜', midnight: '🌙', matcha: '🍵', candy: '🍬' };
-  const themeLabel = k => (THEMES[k] || '') + ' ' + t('th_' + k);
+  const themeLabel = k => k === 'custom' ? '🖼️ ' + t('th_custom') : (THEMES[k] || '') + ' ' + t('th_' + k);
+  const themeOf = v => typeof v === 'string' ? { key: v } : (v && v.key ? v : { key: 'forest' });
+  // a custom photo theme: the photo is the background, bubbles take a colour from it
+  function applyTheme(v) {
+    const th = themeOf(v), pane = $('#pane');
+    pane.dataset.theme = th.key;
+    const props = ['--c-bg', '--c-mine', '--c-mine-ink', '--c-accent', '--c-accent-ink'];
+    if (th.key !== 'custom') { for (const p of props) pane.style.removeProperty(p); return; }
+    const ink = inkFor(th.accent);
+    pane.style.setProperty('--c-bg', 'linear-gradient(rgb(0 0 0 / .16), rgb(0 0 0 / .16)), url("/u/' + th.img + '") center / cover no-repeat');
+    pane.style.setProperty('--c-mine', th.accent); pane.style.setProperty('--c-mine-ink', ink);
+    pane.style.setProperty('--c-accent', th.accent); pane.style.setProperty('--c-accent-ink', ink);
+  }
+  function inkFor(hex) {
+    const n = parseInt(hex.slice(1), 16), c = [n >> 16, (n >> 8) & 255, n & 255].map(v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; });
+    return .2126 * c[0] + .7152 * c[1] + .0722 * c[2] > .45 ? '#1d1d1f' : '#ffffff';
+  }
+  // pick a lively colour from the photo: its average hue, made saturated enough to stand out
+  function accentFrom(blob) {
+    return new Promise(resolve => {
+      const img = new Image(), url = URL.createObjectURL(blob);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const cv = document.createElement('canvas'); cv.width = cv.height = 24;
+        const cx = cv.getContext('2d'); cx.drawImage(img, 0, 0, 24, 24);
+        const px = cx.getImageData(0, 0, 24, 24).data; let r = 0, g = 0, b = 0, w = 0;
+        for (let i = 0; i < px.length; i += 4) {
+          const mx = Math.max(px[i], px[i + 1], px[i + 2]), mn = Math.min(px[i], px[i + 1], px[i + 2]);
+          const wt = 1 + (mx - mn) / 32; // colourful pixels count more than grey ones
+          r += px[i] * wt; g += px[i + 1] * wt; b += px[i + 2] * wt; w += wt;
+        }
+        r /= w * 255; g /= w * 255; b /= w * 255;
+        const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+        let h = 0;
+        if (d) h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+        h = (h * 60 + 360) % 360;
+        const sat = d ? Math.max(.5, Math.min(.85, d / (1 - Math.abs(mx + mn - 1)) + .2)) : 0, lig = .56;
+        const k = n => (n + h / 30) % 12, a = sat * Math.min(lig, 1 - lig);
+        const f = n => Math.round(255 * (lig - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1))));
+        resolve('#' + [f(0), f(8), f(4)].map(v => v.toString(16).padStart(2, '0')).join(''));
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); resolve('#f2b950'); };
+      img.src = url;
+    });
+  }
   const fresh = new Set(); // messages that just arrived, to animate once
   const annText = m => m.ann ? m.ann[lang] || m.ann.en || '' : '';
   function msgLabel(m) { if (m.sys) return t('theme_changed', nameOf(m.from), themeLabel(m.sys.theme)); return m.text || annText(m) || (m.game ? '🎮 ' + t(m.game.kind || m.game) : t('photo')); }
@@ -324,7 +370,14 @@
   $('#gameDlg').addEventListener('click', ev => { if (ev.target === $('#gameDlg')) $('#gameDlg').close(); });
   $('#themeBtn').addEventListener('click', () => {
     const box = $('#swatches'); box.textContent = '';
-    const cur = (cache[current] && cache[current].theme) || 'forest';
+    const curTheme = themeOf(cache[current] && cache[current].theme), cur = curTheme.key;
+    // first tile: upload your own photo (shows the current one if the chat already uses a photo)
+    const up = el('button', 'swatch upload'); up.type = 'button'; up.setAttribute('aria-pressed', String(cur === 'custom'));
+    const upArt = el('span', 'sw-art');
+    if (cur === 'custom') upArt.style.background = 'url("/u/' + curTheme.img + '") center / cover'; else upArt.textContent = '+';
+    up.append(upArt, el('span', null, '🖼️ ' + t('th_upload')));
+    up.addEventListener('click', () => $('#themeFile').click());
+    box.append(up);
     for (const k of Object.keys(THEMES)) {
       const b = el('button', 'swatch'); b.type = 'button'; b.dataset.theme = k; b.setAttribute('aria-pressed', String(k === cur));
       const art = el('span', 'sw-art'); art.append(el('span', 'sw-a'), el('span', 'sw-b'), el('span', 'sw-c'));
@@ -335,6 +388,20 @@
     $('#themeDlg').showModal();
   });
   $('#closeTheme').addEventListener('click', () => $('#themeDlg').close());
+  $('#themeFile').addEventListener('change', async ev => {
+    const file = ev.target.files[0]; ev.target.value = '';
+    const conv = current; if (!file || !conv) return;
+    const tile = document.querySelector('.swatch.upload'); if (tile) tile.classList.add('busy');
+    try {
+      const blob = await shrink(file);
+      if (blob.size > 6 * 1024 * 1024) { const e = new Error('too_big'); e.code = 'too_big'; throw e; }
+      const accent = await accentFrom(blob);
+      const r = await api('/api/upload', { method: 'POST', headers: { 'Content-Type': blob.type || 'application/octet-stream' }, body: blob });
+      $('#themeDlg').close();
+      if (!send({ t: 'theme', conv, key: 'custom', img: r.name, accent })) toast(t('not_sent'));
+    } catch (e) { toast(errText(e.code)); }
+    finally { if (tile) tile.classList.remove('busy'); }
+  });
   $('#themeDlg').addEventListener('click', ev => { if (ev.target === $('#themeDlg')) $('#themeDlg').close(); });
   function renderHead() {
     $('#gameBtn').hidden = !current.startsWith('dm:');
@@ -663,7 +730,7 @@
       if (!prev || dayLabel(prev.ts) !== dayLabel(m.ts)) listEl.append(el('div', 'day', dayLabel(m.ts)));
       listEl.append(msgNode(m, prev, c.list[i + 1] || null));
     });
-    $('#pane').dataset.theme = c.theme || 'forest';
+    applyTheme(c.theme);
     const last = c.list[c.list.length - 1];
     if (last && last.from === me.id && !last.sys) {
       const seen = c.seen || {};
@@ -831,7 +898,7 @@
       if (d.t === 'game' && convs[d.conv] && convs[d.conv].last && convs[d.conv].last.id === d.id) convs[d.conv].last.game = d.game;
       if (d.conv === current) renderMsgs(true);
     } else if (d.t === 'theme') {
-      if (cache[d.conv]) cache[d.conv].theme = d.key;
+      if (cache[d.conv]) cache[d.conv].theme = d.theme;
       if (d.conv === current) renderMsgs(true);
     } else if (d.t === 'seen') {
       const c = cache[d.conv]; if (!c) return;
