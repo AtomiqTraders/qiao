@@ -6,6 +6,7 @@ so nobody needs an app store, a phone number, or a VPN.
 - Invite-only accounts (name + password)
 - Lobby for everyone, plus one-to-one chats
 - Photos, typing and "here now" indicators, unread counts
+- Swipe a message to reply to it; hold a message to copy, edit or delete it (right-click on a computer)
 - Phone notifications for new messages (tap **Notifications** in the chat list). They arrive only
   when Qiao is not on screen. Works in Chrome/Edge/Firefox on Android and in the installed
   Home Screen app on iPhone; browsers in mainland China usually cannot receive them

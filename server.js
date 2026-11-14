@@ -48,10 +48,22 @@ const convs = new Map(); // conv id -> messages, oldest first
 if (fs.existsSync(MSG_FILE)) {
   for (const line of fs.readFileSync(MSG_FILE, 'utf8').split('\n')) {
     if (!line) continue;
-    try { const m = JSON.parse(line); list(m.conv).push(m); } catch { /* skip a torn line */ }
+    try { const m = JSON.parse(line); if (m.op) applyOp(m); else list(m.conv).push(m); } catch { /* skip a torn line */ }
   }
 }
 function list(conv) { let a = convs.get(conv); if (!a) convs.set(conv, a = []); return a; }
+// Edits and deletes are stored as extra lines in the same file and replayed in order on start.
+// A reply keeps a short copy of the message it answers (re), kept in step here.
+function snippet(m) { return { id: m.id, from: m.from, text: [...(m.text || '')].slice(0, 140).join(''), img: !!m.img }; }
+function applyOp(o) {
+  const a = convs.get(o.conv); if (!a) return null;
+  const i = a.findIndex(x => x.id === o.id); if (i < 0) return null;
+  const m = a[i];
+  if (o.op === 'edit') { m.text = o.text; m.edited = o.ts; }
+  else if (o.op === 'del') a.splice(i, 1);
+  for (const x of a) if (x.re && x.re.id === o.id) x.re = o.op === 'del' ? { id: o.id, gone: true } : snippet(m);
+  return m;
+}
 
 // ---------- translation ----------
 // Done by the server (not the reader's phone), so it works the same in every country.
@@ -525,11 +537,32 @@ function onMessage(ws, d) {
     if (!text && !img) return;
     const m = { id: rid(9), conv: d.conv, from: me.id, text, ts: Date.now() };
     if (img) m.img = img;
+    if (typeof d.reply === 'string') { const o = (convs.get(d.conv) || []).find(x => x.id === d.reply); if (o) m.re = snippet(o); }
     list(d.conv).push(m);
     fs.appendFile(MSG_FILE, JSON.stringify(m) + '\n', err => { if (err) console.error('could not save message', err); });
     (me.read = me.read || {})[d.conv] = m.ts; save();
     sendTo(who, { t: 'msg', m, cid: typeof d.cid === 'string' ? d.cid.slice(0, 40) : undefined });
     for (const uid of who) if (uid !== me.id && db.users[uid] && !looking(uid)) pushTo(db.users[uid], m).catch(() => {});
+  } else if (d.t === 'edit' || d.t === 'del') {
+    if (limited('ed:' + me.id, 30, 60000)) return ws.send(JSON.stringify({ t: 'error', error: 'slow_down' }));
+    const m = (convs.get(d.conv) || []).find(x => x.id === d.id); if (!m) return;
+    // your own messages; the admin may also remove anything in the lobby
+    if (m.from !== me.id && !(d.t === 'del' && me.admin && d.conv === 'lobby')) return ws.send(JSON.stringify({ t: 'error', error: 'forbidden' }));
+    let o;
+    if (d.t === 'edit') {
+      const text = typeof d.text === 'string' ? d.text.replace(/\u0000/g, '').trim().slice(0, 4000) : '';
+      if ((!text && !m.img) || text === m.text) return;
+      o = { op: 'edit', conv: d.conv, id: m.id, text, ts: Date.now() };
+      for (const k of Object.keys(TR_LANGS)) delete tr[m.id + '|' + k]; saveTr(); // translate the new text afresh
+    } else {
+      o = { op: 'del', conv: d.conv, id: m.id };
+      if (m.img) fs.unlink(path.join(UP, m.img), () => {});
+      for (const k of Object.keys(TR_LANGS)) delete tr[m.id + '|' + k]; saveTr();
+    }
+    applyOp(o);
+    fs.appendFile(MSG_FILE, JSON.stringify(o) + '\n', err => { if (err) console.error('could not save change', err); });
+    const a = convs.get(d.conv) || [];
+    sendTo(who, d.t === 'edit' ? { t: 'edit', m } : { t: 'del', conv: d.conv, id: m.id, last: a[a.length - 1] || null });
   } else if (d.t === 'typing') {
     if (!limited('ty:' + me.id, 10, 10000)) sendTo(who, { t: 'typing', conv: d.conv, from: me.id }, ws);
   } else if (d.t === 'read') {

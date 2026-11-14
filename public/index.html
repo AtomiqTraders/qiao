@@ -90,6 +90,10 @@
         <div id="msgList"></div>
       </div>
       <p id="typing" aria-live="polite"></p>
+      <div id="ctxBar" hidden>
+        <div class="ctx-text"><div id="ctxLabel"></div><div id="ctxSnip"></div></div>
+        <button class="ghost" id="ctxClose" type="button" data-i18n="cancel"></button>
+      </div>
       <form id="composer">
         <label class="attach" id="attachBtn">
           <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="14" rx="3"/><circle cx="9" cy="10" r="1.6"/><path d="M4.5 17l5-4.5 3.5 3 3-2.5 4 3.5"/></svg>
@@ -123,6 +127,8 @@
     <button class="ghost" id="closeLangs" type="button" data-i18n="close"></button>
   </div>
 </dialog>
+
+<dialog id="msgSheet"><p id="sheetPreview"></p><div id="sheetActs"></div></dialog>
 
 <dialog id="uiLangDlg"><div id="uiLangs" class="picks"></div></dialog>
 

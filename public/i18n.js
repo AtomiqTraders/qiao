@@ -3,6 +3,8 @@
    Any key missing here falls back to English. */
 window.QIAO_I18N = {
   hi: {
+    replying_self: 'अपने संदेश को जवाब',
+    reply: 'जवाब दें', copy_text: 'कॉपी करें', edit: 'बदलें', delete: 'हटाएँ', delete_confirm: 'हटाने के लिए फिर टैप करें', cancel: 'रद्द करें', replying_to: '{0} को जवाब', editing: 'संदेश बदल रहे हैं', edited: 'बदला गया', copied_text: 'कॉपी हो गया', msg_deleted: 'संदेश हटा दिया गया',
     notif_on: '🔔 सूचनाएँ: चालू', notif_off: '🔕 सूचनाएँ: बंद', notif_blocked: '🔕 सूचनाएँ: ब्लॉक',
     notif_unsupported: 'यह ब्राउज़र सूचनाएँ नहीं दिखा सकता। iPhone पर पहले Qiao को होम स्क्रीन पर जोड़ें।',
     notif_blocked_help: 'सूचनाएँ ब्लॉक हैं। ब्राउज़र की सेटिंग में इस साइट के लिए अनुमति दें, फिर दोबारा कोशिश करें।',
@@ -43,6 +45,8 @@ window.QIAO_I18N = {
     err_server: 'सर्वर में कुछ गड़बड़ हुई। फिर कोशिश करें।'
   },
   vi: {
+    replying_self: 'Đang trả lời chính bạn',
+    reply: 'Trả lời', copy_text: 'Sao chép', edit: 'Sửa', delete: 'Xóa', delete_confirm: 'Nhấn lần nữa để xóa', cancel: 'Hủy', replying_to: 'Đang trả lời {0}', editing: 'Đang sửa tin nhắn', edited: 'đã sửa', copied_text: 'Đã sao chép', msg_deleted: 'Tin nhắn đã bị xóa',
     notif_on: '🔔 Thông báo: bật', notif_off: '🔕 Thông báo: tắt', notif_blocked: '🔕 Thông báo: bị chặn',
     notif_unsupported: 'Trình duyệt này không hiển thị được thông báo. Trên iPhone, hãy thêm Qiao vào Màn hình chính trước.',
     notif_blocked_help: 'Thông báo đang bị chặn. Hãy cho phép trang này trong cài đặt trình duyệt rồi thử lại.',
@@ -83,6 +87,8 @@ window.QIAO_I18N = {
     err_server: 'Máy chủ gặp lỗi. Hãy thử lại.'
   },
   ja: {
+    replying_self: '自分のメッセージに返信',
+    reply: '返信', copy_text: 'コピー', edit: '編集', delete: '削除', delete_confirm: 'もう一度タップで削除', cancel: 'キャンセル', replying_to: '{0} さんに返信', editing: 'メッセージを編集中', edited: '編集済み', copied_text: 'コピーしました', msg_deleted: 'メッセージは削除されました',
     notif_on: '🔔 通知：オン', notif_off: '🔕 通知：オフ', notif_blocked: '🔕 通知：ブロック中',
     notif_unsupported: 'このブラウザでは通知を表示できません。iPhone では先に Qiao をホーム画面に追加してください。',
     notif_blocked_help: '通知がブロックされています。ブラウザの設定でこのサイトの通知を許可してから、もう一度お試しください。',
@@ -123,6 +129,8 @@ window.QIAO_I18N = {
     err_server: 'サーバーで問題が起きました。もう一度お試しください。'
   },
   ko: {
+    replying_self: '내 메시지에 답장',
+    reply: '답장', copy_text: '복사', edit: '수정', delete: '삭제', delete_confirm: '한 번 더 누르면 삭제', cancel: '취소', replying_to: '{0} 님에게 답장', editing: '메시지 수정 중', edited: '수정됨', copied_text: '복사했습니다', msg_deleted: '삭제된 메시지입니다',
     notif_on: '🔔 알림: 켜짐', notif_off: '🔕 알림: 꺼짐', notif_blocked: '🔕 알림: 차단됨',
     notif_unsupported: '이 브라우저는 알림을 표시할 수 없습니다. iPhone에서는 먼저 Qiao를 홈 화면에 추가하세요.',
     notif_blocked_help: '알림이 차단되어 있습니다. 브라우저 설정에서 이 사이트의 알림을 허용한 뒤 다시 시도해 주세요.',

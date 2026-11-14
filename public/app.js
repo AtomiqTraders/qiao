@@ -33,6 +33,8 @@
       admin: 'Admin', removed_user: 'Removed member', err_forbidden: 'Only the admin can do that.',
       langs_btn: 'Languages', langs_title: 'Which languages can you read?',
       langs_body: 'Messages in any other language are translated for you.', save: 'Save',
+      reply: 'Reply', copy_text: 'Copy', edit: 'Edit', delete: 'Delete', delete_confirm: 'Tap again to delete', cancel: 'Cancel',
+      replying_to: 'Replying to {0}', replying_self: 'Replying to yourself', editing: 'Editing message', edited: 'edited', copied_text: 'Copied', msg_deleted: 'Message was deleted',
       notif_on: '🔔 Notifications: on', notif_off: '🔕 Notifications: off', notif_blocked: '🔕 Notifications: blocked',
       notif_unsupported: 'This browser cannot show notifications. On iPhone, add Qiao to the Home Screen first.',
       notif_blocked_help: 'Notifications are blocked. Allow them for this site in your browser settings, then try again.',
@@ -73,6 +75,8 @@
       admin: '管理', removed_user: '已移除的成员', err_forbidden: '只有管理员可以这样做。',
       langs_btn: '语言设置', langs_title: '你能看懂哪些语言？',
       langs_body: '其他语言的消息会自动为你翻译。', save: '保存',
+      reply: '回复', copy_text: '复制', edit: '编辑', delete: '删除', delete_confirm: '再点一次删除', cancel: '取消',
+      replying_to: '回复 {0}', replying_self: '回复自己的消息', editing: '正在编辑消息', edited: '已编辑', copied_text: '已复制', msg_deleted: '消息已被删除',
       notif_on: '🔔 消息通知：开', notif_off: '🔕 消息通知：关', notif_blocked: '🔕 消息通知：被阻止',
       notif_unsupported: '这个浏览器不能显示通知。iPhone 需要先把 Qiao 添加到主屏幕。',
       notif_blocked_help: '通知被阻止了。请在浏览器设置里允许这个网站发送通知，然后再试一次。',
@@ -316,26 +320,140 @@
     }
     if (i < text.length) node.append(text.slice(i));
   }
-  function msgNode(m, prev) {
+  const sameRun = (a, b) => a && b && a.from === b.from && Math.abs(b.ts - a.ts) <= 5 * 60000 && dayLabel(a.ts) === dayLabel(b.ts);
+  const nameOf = id => id === me.id ? t('you') : (users.get(id) ? users.get(id).name : t('removed_user'));
+  function quoteNode(re) {
+    const q = el('button', 'quote'); q.type = 'button';
+    if (re.gone) q.append(el('span', 'qtext', t('msg_deleted')));
+    else q.append(el('span', 'qwho', nameOf(re.from)), el('span', 'qtext', re.text || t('photo')));
+    q.addEventListener('click', () => jumpTo(re.id));
+    return q;
+  }
+  function msgNode(m, prev, next) {
     const mine = m.from === me.id;
-    const wrap = el('div', 'msg' + (mine ? ' mine' : ''));
+    const wrap = el('div', 'msg' + (mine ? ' mine' : '') + (sameRun(prev, m) ? ' cont' : ''));
+    wrap.dataset.id = m.id;
     const u = users.get(m.from);
-    const newRun = !prev || prev.from !== m.from || m.ts - prev.ts > 5 * 60000 || dayLabel(prev.ts) !== dayLabel(m.ts);
-    if (current === 'lobby' && !mine && newRun) {
+    if (current === 'lobby' && !mine && !sameRun(prev, m)) {
       const f = el('div', 'from', u ? u.name : t('removed_user')); if (u) f.style.color = u.color; wrap.append(f);
     }
     const b = el('div', 'bubble');
+    if (m.re) b.append(quoteNode(m.re));
     if (m.img) {
-      const img = el('img'); img.src = '/u/' + m.img; img.alt = t('photo'); img.loading = 'lazy';
+      const img = el('img'); img.src = '/u/' + m.img; img.alt = t('photo'); img.loading = 'lazy'; img.draggable = false;
       img.addEventListener('click', () => { $('#photoBig').src = img.src; $('#photoDlg').showModal(); });
       img.addEventListener('load', () => { if (stick) toBottom(); });
       b.append(img);
     }
-    if (m.text) { const s = el('span'); fillText(s, m.text); b.append(s); addTranslation(m, b); }
-    const tm = el('time', null, clock(m.ts)); tm.dateTime = new Date(m.ts).toISOString();
-    wrap.append(b, tm);
+    if (m.text) { const s = el('span', 'body'); fillText(s, m.text); b.append(s); addTranslation(m, b); }
+    const hint = el('span', 'reply-hint'); hint.innerHTML = ICON.reply; hint.setAttribute('aria-hidden', 'true');
+    wrap.append(hint, b);
+    // the time shows once, under the last message of a run from the same person
+    if (!sameRun(m, next) || m.edited) {
+      const tm = el('time', null, sameRun(m, next) ? t('edited') : clock(m.ts) + (m.edited ? ' ' + t('edited') : ''));
+      tm.dateTime = new Date(m.ts).toISOString(); wrap.append(tm);
+    }
+    bindGestures(wrap, m);
     return wrap;
   }
+  function jumpTo(id) {
+    const n = document.querySelector('#msgList .msg[data-id="' + CSS.escape(id) + '"]'); if (!n) return;
+    n.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    n.classList.remove('flash'); void n.offsetWidth; n.classList.add('flash');
+  }
+
+  // Swipe a message toward the middle to reply; hold it (or right-click with a mouse) for the menu.
+  const SWIPE = 56;
+  function bindGestures(node, m) {
+    const dir = m.from === me.id ? -1 : 1;
+    let sx = 0, sy = 0, dx = 0, pid = null, mode = null, timer = null;
+    const hint = node.querySelector('.reply-hint');
+    const reset = () => { clearTimeout(timer); timer = null; node.classList.remove('dragging', 'armed'); node.style.transform = ''; hint.style.opacity = ''; };
+    node.addEventListener('pointerdown', ev => {
+      if (ev.pointerType === 'mouse' || pid !== null) return;
+      sx = ev.clientX; sy = ev.clientY; dx = 0; pid = ev.pointerId; mode = null;
+      timer = setTimeout(() => { timer = null; if (mode === null) { mode = 'hold'; node.dataset.suppress = '1'; if (navigator.vibrate) navigator.vibrate(12); openSheet(m); } }, 460);
+    });
+    node.addEventListener('pointermove', ev => {
+      if (ev.pointerId !== pid || mode === 'hold' || mode === 'scroll') return;
+      const x = (ev.clientX - sx) * dir, y = ev.clientY - sy;
+      if (mode === null) {
+        if (Math.abs(y) > 10 || x < -10) { clearTimeout(timer); timer = null; mode = 'scroll'; return; }
+        if (x > 12 && x > Math.abs(y) * 1.4) { clearTimeout(timer); timer = null; mode = 'swipe'; node.classList.add('dragging'); try { node.setPointerCapture(pid); } catch { /* fine */ } }
+        else return;
+      }
+      dx = Math.max(0, Math.min(x, 84));
+      node.style.transform = 'translateX(' + (dx * dir) + 'px)';
+      hint.style.opacity = String(Math.min(1, dx / SWIPE));
+      const armed = dx >= SWIPE;
+      if (armed && !node.classList.contains('armed') && navigator.vibrate) navigator.vibrate(8);
+      node.classList.toggle('armed', armed);
+    });
+    const end = ev => {
+      if (ev.pointerId !== pid) return;
+      if (mode === 'swipe') { node.dataset.suppress = '1'; if (dx >= SWIPE) startReply(m); }
+      reset(); pid = null; mode = null;
+    };
+    node.addEventListener('pointerup', end);
+    node.addEventListener('pointercancel', end);
+    node.addEventListener('contextmenu', ev => { ev.preventDefault(); clearTimeout(timer); timer = null; if (mode !== 'swipe') { mode = 'hold'; openSheet(m); } });
+    // a hold or swipe must not also count as a tap on a photo or a quote
+    node.addEventListener('click', ev => { if (node.dataset.suppress) { ev.stopPropagation(); ev.preventDefault(); delete node.dataset.suppress; } }, true);
+  }
+
+  // ---------- message menu ----------
+  const ICON = {
+    reply: '<svg viewBox="0 0 24 24"><path d="M10 8L5 12l5 4"/><path d="M5 12h9a5 5 0 0 1 5 5v1"/></svg>',
+    copy: '<svg viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="11" height="11" rx="2.5"/><path d="M15.5 8.5V6.5A2 2 0 0 0 13.5 4.5H6.5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h2"/></svg>',
+    edit: '<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>',
+    del: '<svg viewBox="0 0 24 24"><path d="M5 7h14"/><path d="M10 7V5h4v2"/><path d="M7 7l1 12h8l1-12"/></svg>'
+  };
+  let sheetAt = 0;
+  function openSheet(m) {
+    const dlg = $('#msgSheet'); if (dlg.open) return;
+    const box = $('#sheetActs'); box.textContent = '';
+    $('#sheetPreview').textContent = m.text || t('photo');
+    const act = (icon, label, fn, cls) => {
+      const b = el('button', 'sheet-act' + (cls ? ' ' + cls : '')); b.type = 'button';
+      const ic = el('span'); ic.innerHTML = icon; ic.setAttribute('aria-hidden', 'true');
+      const lab = el('span', null, label); b.append(ic, lab);
+      b.addEventListener('click', () => { if (Date.now() - sheetAt < 450) return; fn(b, lab); }); // ignore the lift of the finger that opened it
+      box.append(b);
+    };
+    const mine = m.from === me.id;
+    act(ICON.reply, t('reply'), () => { dlg.close(); startReply(m); });
+    if (m.text) act(ICON.copy, t('copy_text'), async () => {
+      dlg.close();
+      try { await navigator.clipboard.writeText(m.text); }
+      catch { const ta = el('textarea'); ta.value = m.text; document.body.append(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
+      toast(t('copied_text'));
+    });
+    if (mine && m.text) act(ICON.edit, t('edit'), () => { dlg.close(); startEdit(m); });
+    if (mine || (me.admin && m.conv === 'lobby')) act(ICON.del, t('delete'), (b, lab) => {
+      if (!b.classList.contains('armed')) { b.classList.add('armed'); lab.textContent = t('delete_confirm'); return; }
+      dlg.close();
+      if (!send({ t: 'del', conv: m.conv, id: m.id })) toast(t('not_sent'));
+    }, 'danger');
+    sheetAt = Date.now();
+    dlg.showModal();
+  }
+  $('#msgSheet').addEventListener('click', ev => { if (ev.target === $('#msgSheet') && Date.now() - sheetAt > 450) $('#msgSheet').close(); });
+
+  // ---------- reply / edit bar above the composer ----------
+  let replyTo = null, editing = null;
+  function showCtx() {
+    const bar = $('#ctxBar'), on = replyTo || editing;
+    bar.hidden = !on;
+    const btn = $('#sendBtn'); btn.dataset.i18n = editing ? 'save' : 'send'; btn.textContent = t(btn.dataset.i18n);
+    if (!on) return;
+    $('#ctxLabel').textContent = editing ? t('editing') : (replyTo.from === me.id ? t('replying_self') : t('replying_to', nameOf(replyTo.from)));
+    $('#ctxSnip').textContent = (editing || replyTo).text || t('photo');
+  }
+  function startReply(m) { if (editing) input.value = ''; editing = null; replyTo = m; showCtx(); grow(); input.focus(); }
+  function startEdit(m) { replyTo = null; editing = m; input.value = m.text; showCtx(); grow(); input.focus(); input.setSelectionRange(input.value.length, input.value.length); }
+  function cancelCtx() { if (editing) input.value = ''; replyTo = null; editing = null; showCtx(); grow(); }
+  $('#ctxClose').addEventListener('click', () => { cancelCtx(); input.focus(); });
+
   // Translation of other people's messages into the reader's language:
   // automatic when the switch is on, otherwise a "Translate" button under each message.
   let autoTr = store.get('qiao_autotr') !== '0';
@@ -410,11 +528,11 @@
     listEl.textContent = '';
     $('#olderBtn').hidden = !c.more;
     if (!c.list.length) listEl.append(el('p', 'empty', t('empty_chat')));
-    let prev = null;
-    for (const m of c.list) {
+    c.list.forEach((m, i) => {
+      const prev = c.list[i - 1] || null;
       if (!prev || dayLabel(prev.ts) !== dayLabel(m.ts)) listEl.append(el('div', 'day', dayLabel(m.ts)));
-      listEl.append(msgNode(m, prev)); prev = m;
-    }
+      listEl.append(msgNode(m, prev, c.list[i + 1] || null));
+    });
     if (keepPlace && !stick) box.scrollTop = top + (box.scrollHeight - before); else toBottom();
   }
   async function loadMsgs(conv, older) {
@@ -425,6 +543,7 @@
     c.more = r.more;
   }
   async function openConv(conv, pushHistory) {
+    if (conv !== current && (replyTo || editing)) cancelCtx();
     current = conv; stick = true;
     $('#noChat').hidden = true; $('#pane').hidden = false;
     if (narrow() && pushHistory && !document.body.classList.contains('in-chat')) history.pushState({ chat: 1 }, '');
@@ -536,6 +655,22 @@
         if (m.from !== me.id) { c.unread++; markRead(); }
       } else if (m.from !== me.id) c.unread++;
       renderSide();
+    } else if (d.t === 'edit' || d.t === 'del') {
+      const conv = d.t === 'edit' ? d.m.conv : d.conv, id = d.t === 'edit' ? d.m.id : d.id;
+      const c = cache[conv], i = c ? c.list.findIndex(x => x.id === id) : -1;
+      for (const k of [...trCache.keys()]) if (k.startsWith(id + '|')) trCache.delete(k);
+      if (d.t === 'edit') {
+        if (i >= 0) c.list[i] = d.m;
+        if (c) for (const x of c.list) if (x.re && x.re.id === id) x.re = { id, from: d.m.from, text: [...(d.m.text || '')].slice(0, 140).join(''), img: !!d.m.img };
+        if (convs[conv] && convs[conv].last && convs[conv].last.id === id) convs[conv].last = d.m;
+      } else {
+        if (i >= 0) c.list.splice(i, 1);
+        if (c) for (const x of c.list) if (x.re && x.re.id === id) x.re = { id, gone: true };
+        if (convs[conv]) convs[conv].last = d.last;
+      }
+      if ((replyTo && replyTo.id === id) || (editing && editing.id === id && d.t === 'del')) cancelCtx();
+      if (conv === current) renderMsgs(true);
+      renderSide();
     } else if (d.t === 'typing') {
       const map = typers[d.conv] || (typers[d.conv] = {});
       clearTimeout(map[d.from]);
@@ -567,12 +702,17 @@
   });
   input.addEventListener('keydown', ev => {
     if (ev.key === 'Enter' && !ev.shiftKey && !ev.isComposing && !narrow()) { ev.preventDefault(); $('#composer').requestSubmit(); }
+    else if (ev.key === 'Escape' && (replyTo || editing)) { ev.preventDefault(); cancelCtx(); }
   });
   $('#composer').addEventListener('submit', ev => {
     ev.preventDefault();
     const text = input.value.trim(); if (!text || !current) return;
-    if (!send({ t: 'send', conv: current, text })) return toast(t('not_sent'));
-    input.value = ''; lastTyping = 0; grow(); stick = true; input.focus();
+    if (editing) {
+      if (text !== editing.text && !send({ t: 'edit', conv: current, id: editing.id, text })) return toast(t('not_sent'));
+      cancelCtx(); input.focus(); return;
+    }
+    if (!send({ t: 'send', conv: current, text, reply: replyTo ? replyTo.id : undefined })) return toast(t('not_sent'));
+    input.value = ''; lastTyping = 0; replyTo = null; showCtx(); grow(); stick = true; input.focus();
   });
 
   // photos are redrawn in the browser before upload: smaller files, and hidden location data is dropped
@@ -600,7 +740,8 @@
       const blob = await shrink(file);
       if (blob.size > 6 * 1024 * 1024) { const e = new Error('too_big'); e.code = 'too_big'; throw e; }
       const r = await api('/api/upload', { method: 'POST', headers: { 'Content-Type': blob.type || 'application/octet-stream' }, body: blob });
-      if (!send({ t: 'send', conv, img: r.name, text: '' })) toast(t('not_sent')); else stick = true;
+      if (!send({ t: 'send', conv, img: r.name, text: '', reply: replyTo && replyTo.conv === conv ? replyTo.id : undefined })) toast(t('not_sent'));
+      else { stick = true; if (replyTo) { replyTo = null; showCtx(); } }
     } catch (e) { toast(errText(e.code)); }
     finally { btn.classList.remove('busy'); }
   });
