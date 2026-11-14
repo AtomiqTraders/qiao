@@ -42,6 +42,7 @@
       you_won: 'You won!', they_won: '{0} won', draw: "It's a draw", play_again: 'Play again', pick_one: 'Pick one',
       waiting_pick: 'Waiting for {0} to pick', they_picked: '{0} has picked. Your move',
       sent: 'Sent', seen: 'Seen', seen_by: 'Seen by {0}', seen_all: 'Seen by everyone',
+      upd_title: 'Qiao was updated 🎉', upd_body: 'Refreshing in {0}…', upd_now: 'Refresh now',
       reply: 'Reply', copy_text: 'Copy', edit: 'Edit', delete: 'Delete', delete_confirm: 'Tap again to delete', cancel: 'Cancel',
       replying_to: 'Replying to {0}', replying_self: 'Replying to yourself', editing: 'Editing message', edited: 'edited', copied_text: 'Copied', msg_deleted: 'Message was deleted',
       notif_on: '🔔 Notifications: on', notif_off: '🔕 Notifications: off', notif_blocked: '🔕 Notifications: blocked',
@@ -93,6 +94,7 @@
       you_won: '你赢了！', they_won: '{0} 赢了', draw: '平局', play_again: '再来一局', pick_one: '选一个',
       waiting_pick: '等 {0} 出拳', they_picked: '{0} 已经出了，轮到你',
       sent: '已发送', seen: '已读', seen_by: '{0} 已读', seen_all: '所有人已读',
+      upd_title: 'Qiao 更新了 🎉', upd_body: '{0} 秒后自动刷新…', upd_now: '立即刷新',
       reply: '回复', copy_text: '复制', edit: '编辑', delete: '删除', delete_confirm: '再点一次删除', cancel: '取消',
       replying_to: '回复 {0}', replying_self: '回复自己的消息', editing: '正在编辑消息', edited: '已编辑', copied_text: '已复制', msg_deleted: '消息已被删除',
       notif_on: '🔔 消息通知：开', notif_off: '🔕 消息通知：关', notif_blocked: '🔕 消息通知：被阻止',
@@ -982,6 +984,9 @@
       users.set(d.user.id, d.user); renderSide();
     } else if (d.t === 'read') {
       if (convs[d.conv]) { convs[d.conv].unread = 0; renderSide(); }
+    } else if (d.t === 'hello') {
+      if (!appVersion) appVersion = d.v;
+      else if (d.v !== appVersion) showUpdate(); // the server came back with new page files
     } else if (d.t === 'error') {
       toast(errText(d.error));
     }
@@ -1061,9 +1066,27 @@
   $('#closeInvite').addEventListener('click', () => $('#inviteDlg').close());
 
   // ---------- start ----------
+  // ---------- updates ----------
+  let appVersion = null, updTimer = null;
+  function showUpdate() {
+    if (updTimer) return;
+    let n = 5;
+    const dlg = $('#updDlg'), body = $('#updBody');
+    const go = () => {
+      try { sessionStorage.setItem('qiao_resume', JSON.stringify({ conv: current, text: input.value })); } catch { /* fine */ }
+      location.reload();
+    };
+    $('#updTitle').textContent = t('upd_title'); $('#updNow').textContent = t('upd_now');
+    body.textContent = t('upd_body', n);
+    $('#updNow').onclick = go;
+    dlg.addEventListener('cancel', ev => ev.preventDefault());
+    if (!dlg.open) dlg.showModal();
+    updTimer = setInterval(() => { n--; if (n <= 0) { clearInterval(updTimer); go(); } else body.textContent = t('upd_body', n); }, 1000);
+  }
   async function refresh() {
     const d = await api('/api/me');
     me = d.me; users = new Map(d.users.map(u => [u.id, u])); online = new Set(d.online); convs = d.convs;
+    if (!appVersion) appVersion = d.v;
     renderSide();
   }
   async function boot() {
@@ -1081,6 +1104,9 @@
     setupPush();
     const want = new URLSearchParams(location.search).get('c'); // opened from a notification
     if (want) { history.replaceState(null, '', '/'); openConv(want, true); }
+    let resume = null; // back from an automatic refresh: same chat, unsent text kept
+    try { resume = JSON.parse(sessionStorage.getItem('qiao_resume') || 'null'); sessionStorage.removeItem('qiao_resume'); } catch { /* fine */ }
+    if (resume && resume.conv && !want) { await openConv(resume.conv, true); if (resume.text) { input.value = resume.text; grow(); } }
   }
   applyLang();
   boot();

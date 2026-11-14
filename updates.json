@@ -61,5 +61,14 @@
     "vi": "🧵 Chủ đề cho thông báo\nMỗi thông báo giờ là một thẻ riêng. Chạm vào để mở chủ đề của nó, nơi mọi người có thể trả lời và bàn về bản cập nhật đó.",
     "ja": "🧵 お知らせのスレッド\nお知らせは一つずつカードになりました。タップするとスレッドが開き、そのアップデートについてみんなで返信や話ができます。",
     "ko": "🧵 공지 스레드\n이제 공지마다 따로 카드가 있어요. 누르면 스레드가 열리고, 모두가 그 업데이트에 대해 답장하고 이야기할 수 있어요."
+  },
+  {
+    "id": "2026-11-15-auto-refresh",
+    "en": "🔄 Automatic refresh\nWhen Qiao gets an update, a popup counts down from 5 and the page refreshes by itself. You stay in the same chat and anything you were typing is kept.",
+    "zh": "🔄 自动刷新\nQiao 更新时会弹出提示，从 5 开始倒数，然后网页自动刷新。你会留在原来的聊天里，正在输入的内容也不会丢。",
+    "hi": "🔄 अपने आप रीफ़्रेश\nजब Qiao अपडेट होगा, एक पॉपअप 5 से उल्टी गिनती करेगा और पेज अपने आप रीफ़्रेश हो जाएगा। आप उसी चैट में रहेंगे और जो लिख रहे थे वह बना रहेगा।",
+    "vi": "🔄 Tự làm mới\nKhi Qiao được cập nhật, một cửa sổ sẽ đếm ngược từ 5 rồi trang tự làm mới. Bạn vẫn ở cuộc trò chuyện cũ và nội dung đang gõ vẫn được giữ lại.",
+    "ja": "🔄 自動更新\nQiao がアップデートされると、5 からカウントダウンが表示され、ページが自動で更新されます。同じチャットのままで、入力中の文字も消えません。",
+    "ko": "🔄 자동 새로고침\nQiao가 업데이트되면 5부터 카운트다운하는 창이 뜨고 페이지가 알아서 새로고침돼요. 보던 채팅에 그대로 있고, 쓰던 내용도 남아 있어요."
   }
 ]

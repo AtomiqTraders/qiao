@@ -366,3 +366,9 @@ a.ghost { padding: 8px 12px; border-radius: 999px; text-decoration: none; font-s
 .msg.thread-root .bubble { border-radius: 18px; }
 .thread-div { margin-top: 18px; }
 .news-note .hint-line { display: block; margin-top: 2px; }
+
+/* ----- update popup ----- */
+dialog.upd { text-align: center; width: min(86vw, 340px); }
+.upd-spark { font-size: 2.25rem; margin-bottom: 4px; animation: pop .5s cubic-bezier(.2, .9, .3, 1.25); }
+dialog.upd p { font-variant-numeric: tabular-nums; }
+dialog.upd .primary { width: 100%; padding: 12px; }

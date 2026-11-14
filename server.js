@@ -13,6 +13,12 @@ const DATA = path.resolve(process.env.DATA_DIR || path.join(__dirname, 'data'));
 const UP = path.join(DATA, 'uploads');
 const PUB = path.join(__dirname, 'public');
 const TRUST_PROXY = process.env.TRUST_PROXY === '1';
+// A fingerprint of the page files: when an update changes them, open pages see a new value and refresh.
+const VERSION = (() => {
+  const h = crypto.createHash('sha256');
+  for (const f of fs.readdirSync(PUB).sort()) { const fp = path.join(PUB, f); if (fs.statSync(fp).isFile()) h.update(f).update(fs.readFileSync(fp)); }
+  return h.digest('hex').slice(0, 12);
+})();
 const DB_FILE = path.join(DATA, 'db.json');
 const MSG_FILE = path.join(DATA, 'messages.jsonl');
 const COOKIE = 'qiao_sid';
@@ -422,7 +428,7 @@ async function route(req, res) {
     const out = { lobby: summary(me, 'lobby'), news: summary(me, 'news') };
     for (const k of convs.keys()) if (k.startsWith('th:') && threadRoot(k)) out[k] = summary(me, k);
     for (const id of Object.keys(db.users)) if (id !== me.id) { const c = dmId(me.id, id); out[c] = summary(me, c); }
-    return json(res, 200, { me: own(me), users: Object.values(db.users).map(pub), online: [...sockets.keys()], convs: out });
+    return json(res, 200, { me: own(me), users: Object.values(db.users).map(pub), online: [...sockets.keys()], convs: out, v: VERSION });
   }
 
   if (p === '/api/prefs' && req.method === 'POST') {
@@ -575,6 +581,7 @@ server.on('upgrade', (req, socket, head) => {
   if (!user) { socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n'); socket.destroy(); return; }
   wss.handleUpgrade(req, socket, head, ws => {
     ws.uid = user.id; ws.alive = true; ws.visible = true;
+    ws.send(JSON.stringify({ t: 'hello', v: VERSION }));
     let set = sockets.get(user.id);
     const first = !set;
     if (first) sockets.set(user.id, set = new Set());

@@ -3,6 +3,7 @@
    Any key missing here falls back to English. */
 window.QIAO_I18N = {
   hi: {
+    upd_title: 'Qiao अपडेट हो गया 🎉', upd_body: '{0} सेकंड में रीफ़्रेश होगा…', upd_now: 'अभी रीफ़्रेश करें',
     news_hint: 'किसी पोस्ट पर टैप करके उसका थ्रेड खोलें।', thread_start: 'थ्रेड में जवाब दें', replies_one: '1 जवाब', replies_n: '{0} जवाब', replies_head: 'जवाब',
     th_custom: 'एक फ़ोटो', th_upload: 'अपनी फ़ोटो',
     theme_btn: 'चैट थीम', theme_body: 'इस चैट में सबको दिखेगी।', theme_changed: '{0} ने थीम बदलकर {1} कर दी', th_forest: 'जंगल', th_sakura: 'सकुरा', th_ocean: 'समंदर', th_sunset: 'सूर्यास्त', th_lavender: 'लैवेंडर', th_midnight: 'आधी रात', th_matcha: 'माचा', th_candy: 'कैंडी',
@@ -51,6 +52,7 @@ window.QIAO_I18N = {
     err_server: 'सर्वर में कुछ गड़बड़ हुई। फिर कोशिश करें।'
   },
   vi: {
+    upd_title: 'Qiao đã được cập nhật 🎉', upd_body: 'Tự làm mới sau {0} giây…', upd_now: 'Làm mới ngay',
     news_hint: 'Chạm vào một bài để mở chủ đề của nó.', thread_start: 'Trả lời trong chủ đề', replies_one: '1 trả lời', replies_n: '{0} trả lời', replies_head: 'Trả lời',
     th_custom: 'một bức ảnh', th_upload: 'Ảnh của bạn',
     theme_btn: 'Chủ đề trò chuyện', theme_body: 'Mọi người trong cuộc trò chuyện đều thấy.', theme_changed: '{0} đã đổi chủ đề thành {1}', th_forest: 'Rừng', th_sakura: 'Hoa anh đào', th_ocean: 'Đại dương', th_sunset: 'Hoàng hôn', th_lavender: 'Oải hương', th_midnight: 'Nửa đêm', th_matcha: 'Matcha', th_candy: 'Kẹo ngọt',
@@ -99,6 +101,7 @@ window.QIAO_I18N = {
     err_server: 'Máy chủ gặp lỗi. Hãy thử lại.'
   },
   ja: {
+    upd_title: 'Qiao がアップデートされました 🎉', upd_body: '{0} 秒後に自動で更新します…', upd_now: '今すぐ更新',
     news_hint: '投稿をタップするとスレッドが開きます。', thread_start: 'スレッドで返信', replies_one: '返信 1 件', replies_n: '返信 {0} 件', replies_head: '返信',
     th_custom: '写真', th_upload: '自分の写真',
     theme_btn: 'チャットのテーマ', theme_body: 'このチャットの全員に表示されます。', theme_changed: '{0} さんがテーマを{1}に変更しました', th_forest: '森', th_sakura: '桜', th_ocean: '海', th_sunset: '夕焼け', th_lavender: 'ラベンダー', th_midnight: '真夜中', th_matcha: '抹茶', th_candy: 'キャンディ',
@@ -147,6 +150,7 @@ window.QIAO_I18N = {
     err_server: 'サーバーで問題が起きました。もう一度お試しください。'
   },
   ko: {
+    upd_title: 'Qiao가 업데이트됐어요 🎉', upd_body: '{0}초 후 자동으로 새로고침해요…', upd_now: '지금 새로고침',
     news_hint: '게시물을 누르면 스레드가 열려요.', thread_start: '스레드에서 답장', replies_one: '답장 1개', replies_n: '답장 {0}개', replies_head: '답장',
     th_custom: '사진', th_upload: '내 사진',
     theme_btn: '채팅 테마', theme_body: '이 채팅의 모두에게 보여요.', theme_changed: '{0} 님이 테마를 {1}(으)로 바꿨어요', th_forest: '숲', th_sakura: '벚꽃', th_ocean: '바다', th_sunset: '노을', th_lavender: '라벤더', th_midnight: '한밤', th_matcha: '말차', th_candy: '캔디',
