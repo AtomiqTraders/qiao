@@ -24,7 +24,9 @@ const MSG_FILE = path.join(DATA, 'messages.jsonl');
 const COOKIE = 'qiao_sid';
 const INVITE_TTL = 7 * 24 * 3600 * 1000;
 const SESSION_TTL = 180 * 24 * 3600 * 1000;
-const MAX_UPLOAD = 6 * 1024 * 1024;
+const MAX_IMAGE = 15 * 1024 * 1024;
+const MAX_VIDEO = 40 * 1024 * 1024;
+const MAX_MEDIA = 10; // photos and videos in one message
 const TR_FILE = path.join(DATA, 'translations.json');
 const TR_LANGS = { en: 'en', zh: 'zh-CN', hi: 'hi', vi: 'vi', ja: 'ja', ko: 'ko' }; // our code -> translator's code
 const TR_ENDPOINT = process.env.TRANSLATE_ENDPOINT || 'https://translate.googleapis.com/translate_a/single';
@@ -62,7 +64,7 @@ if (fs.existsSync(MSG_FILE)) {
 function list(conv) { let a = convs.get(conv); if (!a) convs.set(conv, a = []); return a; }
 // Edits and deletes are stored as extra lines in the same file and replayed in order on start.
 // A reply keeps a short copy of the message it answers (re), kept in step here.
-function snippet(m) { const r = { id: m.id, from: m.from, text: [...(m.text || (m.ann && m.ann.en) || '')].slice(0, 140).join(''), img: !!m.img }; if (m.game) r.game = m.game.kind; return r; }
+function snippet(m) { const r = { id: m.id, from: m.from, text: [...(m.text || (m.ann && m.ann.en) || '')].slice(0, 140).join(''), img: !!(m.img || (m.media && m.media.length)) }; if (m.game) r.game = m.game.kind; return r; }
 const REACTS = ['❤️', '😂', '😮', '😢', '😡', '👍'];
 // one reaction per person per message; e === null takes theirs away
 function setReaction(m, uid, e) {
@@ -170,7 +172,7 @@ const VAPID_FILE = path.join(DATA, 'vapid.json');
 let vapid;
 try { vapid = JSON.parse(fs.readFileSync(VAPID_FILE, 'utf8')); } catch { vapid = webpush.generateVAPIDKeys(); fs.writeFileSync(VAPID_FILE, JSON.stringify(vapid), { mode: 0o600 }); }
 webpush.setVapidDetails(process.env.PUSH_CONTACT || 'mailto:admin@qiao.invalid', vapid.publicKey, vapid.privateKey);
-const PUSH_WORDS = { news: { en: 'Announcements', zh: '公告', hi: 'घोषणाएँ', vi: 'Thông báo', ja: 'お知らせ', ko: '공지' }, game: { en: 'Wants to play', zh: '邀请你玩游戏', hi: 'खेलना चाहते हैं', vi: 'Muốn chơi cùng bạn', ja: 'ゲームに誘っています', ko: '게임을 하자고 해요' }, turn: { en: 'Your turn', zh: '轮到你了', hi: 'आपकी बारी', vi: 'Đến lượt bạn', ja: 'あなたの番です', ko: '내 차례' }, photo: { en: 'Photo', zh: '图片', hi: 'फ़ोटो', vi: 'Ảnh', ja: '写真', ko: '사진' }, lobby: { en: 'Lobby', zh: '大厅', hi: 'लॉबी', vi: 'Sảnh chung', ja: 'ロビー', ko: '로비' } };
+const PUSH_WORDS = { news: { en: 'Announcements', zh: '公告', hi: 'घोषणाएँ', vi: 'Thông báo', ja: 'お知らせ', ko: '공지' }, game: { en: 'Wants to play', zh: '邀请你玩游戏', hi: 'खेलना चाहते हैं', vi: 'Muốn chơi cùng bạn', ja: 'ゲームに誘っています', ko: '게임을 하자고 해요' }, turn: { en: 'Your turn', zh: '轮到你了', hi: 'आपकी बारी', vi: 'Đến lượt bạn', ja: 'あなたの番です', ko: '내 차례' }, photo: { en: 'Photo', zh: '图片', hi: 'फ़ोटो', vi: 'Ảnh', ja: '写真', ko: '사진' }, video: { en: 'Video', zh: '视频', hi: 'वीडियो', vi: 'Video', ja: '動画', ko: '동영상' }, lobby: { en: 'Lobby', zh: '大厅', hi: 'लॉबी', vi: 'Sảnh chung', ja: 'ロビー', ko: '로비' } };
 function validSub(x) {
   if (!x || typeof x !== 'object' || typeof x.endpoint !== 'string' || x.endpoint.length > 1000 || !x.keys || typeof x.keys !== 'object') return null;
   let u; try { u = new URL(x.endpoint); } catch { return null; }
@@ -185,7 +187,7 @@ async function pushTo(u, m, override) {
   const sender = db.users[m.from];
   const grp = m.conv.startsWith('th:') ? 'news' : m.conv;
   const title = (sender ? sender.name : 'Qiao 桥') + (grp === 'lobby' || grp === 'news' ? ' · ' + PUSH_WORDS[grp][lang] : '');
-  let body = m.ann ? m.ann[lang] || m.ann.en : override ? '🎮 ' + PUSH_WORDS[override][lang] : m.text || (m.game ? '🎮 ' + PUSH_WORDS.game[lang] : PUSH_WORDS.photo[lang]);
+  let body = m.ann ? m.ann[lang] || m.ann.en : override ? '🎮 ' + PUSH_WORDS[override][lang] : m.text || (m.game ? '🎮 ' + PUSH_WORDS.game[lang] : (m.media || []).some(f => !IMAGE_RE.test(f)) ? '🎬 ' + PUSH_WORDS.video[lang] : '📷 ' + PUSH_WORDS.photo[lang]);
   if (m.text && !override && !m.ann) { try { const t = await Promise.race([translateFor(u, m), new Promise(r => setTimeout(() => r(null), 4000))]); if (t) body = t; } catch { /* send the original */ } }
   const payload = JSON.stringify({ title, body: [...body].slice(0, 180).join(''), conv: m.conv });
   for (const sub of [...u.push]) {
@@ -348,7 +350,7 @@ function validInvite(code) {
 
 // ---------- static files ----------
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
-  '.svg': 'image/svg+xml', '.png': 'image/png', '.webmanifest': 'application/manifest+json', '.jpg': 'image/jpeg', '.gif': 'image/gif', '.webp': 'image/webp' };
+  '.svg': 'image/svg+xml', '.png': 'image/png', '.webmanifest': 'application/manifest+json', '.jpg': 'image/jpeg', '.gif': 'image/gif', '.webp': 'image/webp', '.mp4': 'video/mp4', '.webm': 'video/webm', '.mov': 'video/quicktime' };
 function sendFile(res, file, cache) {
   fs.readFile(file, (err, buf) => {
     if (err) return json(res, 404, { error: 'not_found' });
@@ -356,6 +358,33 @@ function sendFile(res, file, cache) {
     res.end(buf);
   });
 }
+// Uploaded files are served in pieces when asked (Range), which phones need to play and seek videos.
+function sendUpload(req, res, file) {
+  fs.stat(file, (err, st) => {
+    if (err || !st.isFile()) return json(res, 404, { error: 'not_found' });
+    const head = { ...HEADERS, 'Content-Type': TYPES[path.extname(file)] || 'application/octet-stream', 'Cache-Control': 'private, max-age=31536000, immutable', 'Accept-Ranges': 'bytes' };
+    const m = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range || '');
+    if (m && (m[1] || m[2])) {
+      let start = m[1] ? Number(m[1]) : st.size - Number(m[2]), end = m[1] && m[2] ? Number(m[2]) : st.size - 1;
+      if (start < 0) start = 0;
+      end = Math.min(end, st.size - 1);
+      if (start > end || start >= st.size) { res.writeHead(416, { ...head, 'Content-Range': 'bytes */' + st.size }); return res.end(); }
+      res.writeHead(206, { ...head, 'Content-Range': `bytes ${start}-${end}/${st.size}`, 'Content-Length': end - start + 1 });
+      return fs.createReadStream(file, { start, end }).pipe(res);
+    }
+    res.writeHead(200, { ...head, 'Content-Length': st.size });
+    fs.createReadStream(file).pipe(res);
+  });
+}
+// what an uploaded file really is, judged from its first bytes
+function mediaKind(buf) {
+  const img = imageExt(buf); if (img) return { ext: img, video: false };
+  if (buf.length >= 12 && buf.toString('latin1', 4, 8) === 'ftyp') return { ext: buf.toString('latin1', 8, 12) === 'qt  ' ? 'mov' : 'mp4', video: true };
+  if (buf.length >= 4 && buf.readUInt32BE(0) === 0x1a45dfa3) return { ext: 'webm', video: true };
+  return null;
+}
+const IMAGE_RE = /\.(jpg|png|gif|webp)$/;
+const goodMedia = n => typeof n === 'string' && UPLOAD_RE.test(n) && fs.existsSync(path.join(UP, n));
 function imageExt(buf) {
   if (buf.length < 12) return null;
   if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return 'jpg';
@@ -364,7 +393,7 @@ function imageExt(buf) {
   if (buf.toString('latin1', 0, 4) === 'RIFF' && buf.toString('latin1', 8, 12) === 'WEBP') return 'webp';
   return null;
 }
-const UPLOAD_RE = /^[\w-]{16}\.(jpg|png|gif|webp)$/;
+const UPLOAD_RE = /^[\w-]{16}\.(jpg|png|gif|webp|mp4|webm|mov)$/;
 
 // ---------- http routes ----------
 async function route(req, res) {
@@ -540,18 +569,31 @@ async function route(req, res) {
   }
 
   if (p === '/api/upload' && req.method === 'POST') {
-    if (limited('up:' + me.id, 30, 600000)) fail(429, 'slow_down');
-    const buf = await readBody(req, MAX_UPLOAD);
-    const ext = imageExt(buf); if (!ext) fail(400, 'bad_image');
-    const name = rid(12) + '.' + ext;
-    await fs.promises.writeFile(path.join(UP, name), buf);
-    return json(res, 200, { name });
+    if (limited('up:' + me.id, 80, 600000)) fail(429, 'slow_down');
+    if (Number(req.headers['content-length'] || 0) > MAX_VIDEO) fail(413, 'too_big');
+    // written straight to disk, so a big video never sits in memory
+    const tmp = path.join(UP, '.part-' + rid(8));
+    try {
+      await new Promise((resolve, reject) => {
+        let size = 0; const out = fs.createWriteStream(tmp);
+        req.on('data', c => { size += c.length; if (size > MAX_VIDEO) { const e = new Error('too_big'); e.status = 413; e.code = 'too_big'; out.destroy(); req.destroy(); reject(e); } });
+        req.on('error', reject); out.on('error', reject); out.on('finish', resolve);
+        req.pipe(out);
+      });
+      const fd = await fs.promises.open(tmp, 'r'); const head = Buffer.alloc(16);
+      await fd.read(head, 0, 16, 0); const { size } = await fd.stat(); await fd.close();
+      const kind = mediaKind(head); if (!kind) fail(400, 'bad_image');
+      if (!kind.video && size > MAX_IMAGE) fail(413, 'too_big');
+      const name = rid(12) + '.' + kind.ext;
+      await fs.promises.rename(tmp, path.join(UP, name));
+      return json(res, 200, { name, video: kind.video });
+    } finally { fs.unlink(tmp, () => {}); }
   }
 
   if (p.startsWith('/u/') && req.method === 'GET') {
     const name = p.slice(3);
     if (!UPLOAD_RE.test(name)) fail(404, 'not_found');
-    return sendFile(res, path.join(UP, name), 'private, max-age=31536000, immutable');
+    return sendUpload(req, res, path.join(UP, name));
   }
 
   fail(404, 'not_found');
@@ -610,11 +652,13 @@ function onMessage(ws, d) {
     if (d.conv === 'news' && !me.admin) return ws.send(JSON.stringify({ t: 'error', error: 'forbidden' }));
     if (limited('ms:' + me.id, 25, 10000)) return ws.send(JSON.stringify({ t: 'error', error: 'slow_down', cid: d.cid }));
     const text = typeof d.text === 'string' ? d.text.replace(/\u0000/g, '').trim().slice(0, 4000) : '';
-    const img = typeof d.img === 'string' && UPLOAD_RE.test(d.img) && fs.existsSync(path.join(UP, d.img)) ? d.img : null;
+    const img = goodMedia(d.img) && IMAGE_RE.test(d.img) ? d.img : null;
+    const media = Array.isArray(d.media) ? [...new Set(d.media.filter(goodMedia))].slice(0, MAX_MEDIA) : [];
     const game = d.game && d.conv.startsWith('dm:') ? newGame(d.game, me.id, who.find(x => x !== me.id)) : null; // games are for one-to-one chats
-    if (!text && !img && !game) return;
+    if (!text && !img && !game && !media.length) return;
     const m = { id: rid(9), conv: d.conv, from: me.id, text: game ? '' : text, ts: Date.now() };
     if (img && !game) m.img = img;
+    if (media.length && !game) m.media = media;
     if (game) m.game = game;
     if (typeof d.reply === 'string') { const o = (convs.get(d.conv) || []).find(x => x.id === d.reply); if (o) m.re = snippet(o); }
     list(d.conv).push(m);
@@ -638,7 +682,7 @@ function onMessage(ws, d) {
       for (const k of Object.keys(TR_LANGS)) delete tr[m.id + '|' + k]; saveTr(); // translate the new text afresh
     } else {
       o = { op: 'del', conv: d.conv, id: m.id };
-      if (m.img) fs.unlink(path.join(UP, m.img), () => {});
+      for (const f of [m.img, ...(m.media || [])]) if (f) fs.unlink(path.join(UP, f), () => {});
       for (const k of Object.keys(TR_LANGS)) delete tr[m.id + '|' + k]; saveTr();
     }
     applyOp(o);
@@ -649,7 +693,7 @@ function onMessage(ws, d) {
     if (d.conv === 'news' || d.conv.startsWith('th:')) return;
     let val; // a built-in theme name, or { key: 'custom', img, accent } for a photo someone uploaded
     if (d.key === 'custom') {
-      if (typeof d.img !== 'string' || !UPLOAD_RE.test(d.img) || !fs.existsSync(path.join(UP, d.img)) || !/^#[0-9a-f]{6}$/i.test(d.accent || '')) return;
+      if (!goodMedia(d.img) || !IMAGE_RE.test(d.img) || !/^#[0-9a-f]{6}$/i.test(d.accent || '')) return;
       val = { key: 'custom', img: d.img, accent: d.accent.toLowerCase() };
     } else {
       if (!THEMES.includes(d.key) || (db.themes[d.conv] || 'forest') === d.key) return;

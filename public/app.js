@@ -27,7 +27,7 @@
       news_hint: 'Tap a post to open its thread.', thread_start: 'Reply in thread', replies_one: '1 reply', replies_n: '{0} replies', replies_head: 'Replies',
       nobody: 'Nobody else is here yet. Invite a friend.',
       online: 'Here now', offline: 'Away',
-      older: 'Show earlier messages', send: 'Send', send_photo: 'Send a photo',
+      older: 'Show earlier messages', send: 'Send', send_photo: 'Send photos or videos',
       type_here: 'Write a message', empty_chat: 'No messages yet. Say hi.',
       typing: '{0} is typing…', photo: 'Photo', you: 'You',
       today: 'Today', yesterday: 'Yesterday',
@@ -57,8 +57,9 @@
       err_name_taken: 'Someone already uses that name. Pick another.',
       err_bad_login: 'Wrong name or password.',
       err_slow_down: 'Too many tries. Wait a few minutes.',
-      err_too_big: 'That photo is too large. The limit is 6 MB.',
-      err_bad_image: 'Only JPG, PNG, GIF and WebP photos can be sent.',
+      err_too_big: 'That file is too large. Photos can be up to 15 MB and videos up to 40 MB.',
+      err_bad_image: 'Only photos (JPG, PNG, GIF, WebP) and videos (MP4, WebM, MOV) can be sent.',
+      video: 'Video', photos_n: '{0} photos', uploading: 'Uploading {0}/{1}… {2}%', too_many: 'You can send up to 10 at once.',
       err_network: 'Could not reach the server. Check your connection.',
       err_server: 'Something went wrong on the server. Try again.'
     },
@@ -79,7 +80,7 @@
       news_hint: '点一条公告就能打开它的讨论。', thread_start: '在讨论里回复', replies_one: '1 条回复', replies_n: '{0} 条回复', replies_head: '回复',
       nobody: '这里还没有其他人，邀请一位朋友吧。',
       online: '在线', offline: '离开',
-      older: '查看更早的消息', send: '发送', send_photo: '发送图片',
+      older: '查看更早的消息', send: '发送', send_photo: '发送照片或视频',
       type_here: '写消息', empty_chat: '还没有消息，打个招呼吧。',
       typing: '{0} 正在输入…', photo: '图片', you: '你',
       today: '今天', yesterday: '昨天',
@@ -109,8 +110,9 @@
       err_name_taken: '这个名字已经有人用了，换一个吧。',
       err_bad_login: '名字或密码不对。',
       err_slow_down: '尝试次数太多，请等几分钟。',
-      err_too_big: '图片太大，上限是 6 MB。',
-      err_bad_image: '只能发送 JPG、PNG、GIF 和 WebP 图片。',
+      err_too_big: '文件太大了。照片最大 15 MB，视频最大 40 MB。',
+      err_bad_image: '只能发送照片（JPG、PNG、GIF、WebP）和视频（MP4、WebM、MOV）。',
+      video: '视频', photos_n: '{0} 张照片', uploading: '正在上传 {0}/{1}… {2}%', too_many: '一次最多发送 10 个。',
       err_network: '连接不上服务器，请检查网络。',
       err_server: '服务器出了点问题，请再试一次。'
     }
@@ -335,7 +337,10 @@
   }
   const fresh = new Set(); // messages that just arrived, to animate once
   const annText = m => m.ann ? m.ann[lang] || m.ann.en || '' : '';
-  function msgLabel(m) { if (m.sys) return t('theme_changed', nameOf(m.from), themeLabel(m.sys.theme)); return m.text || annText(m) || (m.game ? '🎮 ' + t(m.game.kind || m.game) : t('photo')); }
+  function msgLabel(m) { if (m.sys) return t('theme_changed', nameOf(m.from), themeLabel(m.sys.theme)); return m.text || annText(m) || (m.game ? '🎮 ' + t(m.game.kind || m.game) : mediaLabel(m)); }
+  const isVideo = n => /\.(mp4|webm|mov)$/.test(n);
+  const mediaOf = m => m.media || (m.img ? [m.img] : []);
+  function mediaLabel(m) { const f = mediaOf(m); if (f.some(isVideo)) return '🎬 ' + t('video'); return f.length > 1 ? '📷 ' + t('photos_n', f.length) : t('photo'); }
   function roomRow(conv, title, sub, user) {
     const b = el('button', 'room'); b.type = 'button';
     if (conv === current || (conv === 'news' && current && current.startsWith('th:'))) b.setAttribute('aria-current', 'true');
@@ -463,12 +468,7 @@
     }
     const b = el('div', 'bubble');
     if (m.re) b.append(quoteNode(m.re));
-    if (m.img) {
-      const img = el('img'); img.src = '/u/' + m.img; img.alt = t('photo'); img.loading = 'lazy'; img.draggable = false;
-      img.addEventListener('click', () => { $('#photoBig').src = img.src; $('#photoDlg').showModal(); });
-      img.addEventListener('load', () => { if (stick) toBottom(); });
-      b.append(img);
-    }
+    if (mediaOf(m).length) { b.append(mediaGrid(m)); if (!m.text && !m.re) b.classList.add('media-only'); }
     if (m.text) { const s = el('span', 'body'); fillText(s, m.text); b.append(s); addTranslation(m, b); }
     if (m.ann) { b.classList.add('ann'); const s = el('span', 'body'); fillText(s, annText(m)); b.append(s); }
     if (m.game) { b.classList.add('game-b'); b.append(gameNode(m)); }
@@ -548,6 +548,62 @@
   }
   function startGame(kind, conv) { if (!send({ t: 'send', conv: conv || current, game: kind })) toast(t('not_sent')); else stick = true; }
 
+  // ---------- photos and videos ----------
+  function mediaGrid(m) {
+    const files = mediaOf(m), shown = files.slice(0, 4);
+    const grid = el('div', 'media n' + Math.min(files.length, 4));
+    shown.forEach((f, i) => {
+      const cell = el('button', 'mcell'); cell.type = 'button';
+      if (isVideo(f)) {
+        const v = el('video'); v.src = '/u/' + f + '#t=0.1'; v.preload = 'metadata'; v.muted = true; v.playsInline = true;
+        v.addEventListener('loadedmetadata', () => { if (stick) toBottom(); });
+        cell.append(v, el('span', 'play'));
+        cell.setAttribute('aria-label', t('video'));
+      } else {
+        const img = el('img'); img.src = '/u/' + f; img.alt = t('photo'); img.loading = 'lazy'; img.draggable = false;
+        img.addEventListener('load', () => { if (stick) toBottom(); });
+        cell.append(img);
+      }
+      if (i === 3 && files.length > 4) cell.append(el('span', 'more', '+' + (files.length - 4)));
+      cell.addEventListener('click', () => openViewer(files, i));
+      grid.append(cell);
+    });
+    return grid;
+  }
+  // full screen viewer: swipe or use the arrows to go through everything in the message
+  let vFiles = [], vIndex = 0;
+  function openViewer(files, i) { vFiles = files; vIndex = i; drawViewer(); if (!$('#viewer').open) $('#viewer').showModal(); }
+  function drawViewer() {
+    const stage = $('#vStage'); stage.textContent = '';
+    const f = vFiles[vIndex];
+    if (isVideo(f)) { const v = el('video'); v.src = '/u/' + f; v.controls = true; v.autoplay = true; v.playsInline = true; stage.append(v); }
+    else { const img = el('img'); img.src = '/u/' + f; img.alt = t('photo'); stage.append(img); }
+    $('#vCount').textContent = vFiles.length > 1 ? (vIndex + 1) + ' / ' + vFiles.length : '';
+    $('#vPrev').hidden = vIndex === 0; $('#vNext').hidden = vIndex >= vFiles.length - 1;
+  }
+  const vStep = d => { const n = vIndex + d; if (n < 0 || n >= vFiles.length) return; vIndex = n; drawViewer(); };
+  $('#vPrev').addEventListener('click', () => vStep(-1));
+  $('#vNext').addEventListener('click', () => vStep(1));
+  $('#vClose').addEventListener('click', () => $('#viewer').close());
+  $('#viewer').addEventListener('close', () => { $('#vStage').textContent = ''; }); // stops a playing video
+  $('#viewer').addEventListener('keydown', ev => { if (ev.key === 'ArrowLeft') vStep(-1); if (ev.key === 'ArrowRight') vStep(1); });
+  $('#vStage').addEventListener('click', ev => { if (ev.target === $('#vStage')) $('#viewer').close(); });
+  { let x0 = null; const st = $('#vStage');
+    st.addEventListener('pointerdown', ev => { if (ev.target.tagName !== 'VIDEO') x0 = ev.clientX; });
+    st.addEventListener('pointerup', ev => { if (x0 === null) return; const dx = ev.clientX - x0; x0 = null; if (Math.abs(dx) > 50) vStep(dx < 0 ? 1 : -1); });
+  }
+  // upload with progress, so a slow video shows how far it got
+  function uploadFile(blob, onProgress) {
+    return new Promise((resolve, reject) => {
+      const x = new XMLHttpRequest(); x.open('POST', '/api/upload');
+      x.setRequestHeader('Content-Type', blob.type || 'application/octet-stream');
+      x.upload.onprogress = ev => { if (ev.lengthComputable) onProgress(ev.loaded / ev.total); };
+      x.onload = () => { let b = {}; try { b = JSON.parse(x.responseText); } catch { /* not json */ } if (x.status === 200) resolve(b); else { const e = new Error(b.error || 'server'); e.code = b.error || (x.status === 413 ? 'too_big' : 'server'); reject(e); } };
+      x.onerror = () => { const e = new Error('network'); e.code = 'network'; reject(e); };
+      x.send(blob);
+    });
+  }
+
   function jumpTo(id) {
     const n = document.querySelector('#msgList .msg[data-id="' + CSS.escape(id) + '"]'); if (!n) return;
     n.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
@@ -582,7 +638,7 @@
       if (armed && !node.classList.contains('armed') && navigator.vibrate) navigator.vibrate(8);
       node.classList.toggle('armed', armed);
     });
-    const interactive = target => target.closest && target.closest('img, button, a, .game');
+    const interactive = target => target.closest && target.closest('img, video, button, a, .game');
     const end = ev => {
       if (ev.pointerId !== pid) return;
       if (mode === 'swipe') { node.dataset.suppress = '1'; if (dx >= SWIPE) startReply(m); }
@@ -744,7 +800,8 @@
     const title = el('div', 'nc-title', lines[0]), body = el('div', 'nc-body', lines.slice(1).join('\n'));
     card.append(head, title);
     if (body.textContent) card.append(body);
-    if (m.img) { const img = el('img', 'nc-img'); img.src = '/u/' + m.img; img.alt = ''; img.loading = 'lazy'; card.append(img); }
+    const pic = mediaOf(m).find(f => !isVideo(f));
+    if (pic) { const img = el('img', 'nc-img'); img.src = '/u/' + pic; img.alt = ''; img.loading = 'lazy'; card.append(img); }
     if (m.text && needsTr(m.text)) fetchTr(m).then(tx => { if (!tx) return; const l = tx.split('\n'); title.textContent = l[0]; body.textContent = l.slice(1).join('\n'); if (body.textContent && !body.parentNode) title.after(body); }).catch(() => {});
     const info = (cache.news && cache.news.threads && cache.news.threads[m.id]) || { n: 0 };
     const unread = (convs['th:' + m.id] && convs['th:' + m.id].unread) || 0;
@@ -1033,19 +1090,27 @@
     });
   }
   $('#file').addEventListener('change', async ev => {
-    const file = ev.target.files[0]; ev.target.value = '';
-    const conv = current; if (!file || !conv) return;
+    let files = [...ev.target.files]; ev.target.value = '';
+    const conv = current; if (!files.length || !conv) return;
+    if (files.length > 10) { toast(t('too_many')); files = files.slice(0, 10); }
     const btn = $('#attachBtn'); btn.classList.add('busy');
+    const names = [];
     try {
-      const blob = await shrink(file);
-      if (blob.size > 6 * 1024 * 1024) { const e = new Error('too_big'); e.code = 'too_big'; throw e; }
-      const r = await api('/api/upload', { method: 'POST', headers: { 'Content-Type': blob.type || 'application/octet-stream' }, body: blob });
-      if (!send({ t: 'send', conv, img: r.name, text: '', reply: replyTo && replyTo.conv === conv ? replyTo.id : undefined })) toast(t('not_sent'));
+      for (let i = 0; i < files.length; i++) {
+        const f = files[i], video = f.type.startsWith('video/');
+        const blob = video ? f : await shrink(f); // photos are made smaller first; videos are sent as they are
+        if (blob.size > (video ? 40 : 15) * 1024 * 1024) { const e = new Error('too_big'); e.code = 'too_big'; throw e; }
+        const show = p => toast(t('uploading', i + 1, files.length, Math.round(p * 100)), 0);
+        show(0);
+        const r = await uploadFile(blob, show);
+        names.push(r.name);
+      }
+      $('#toast').hidden = true;
+      if (!send({ t: 'send', conv, media: names, text: '', reply: replyTo && replyTo.conv === conv ? replyTo.id : undefined })) toast(t('not_sent'));
       else { stick = true; if (replyTo) { replyTo = null; showCtx(); } }
     } catch (e) { toast(errText(e.code)); }
     finally { btn.classList.remove('busy'); }
   });
-  $('#photoDlg').addEventListener('click', () => $('#photoDlg').close());
 
   // ---------- invites ----------
   $('#inviteBtn').addEventListener('click', async () => {

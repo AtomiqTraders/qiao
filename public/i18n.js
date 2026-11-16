@@ -3,6 +3,7 @@
    Any key missing here falls back to English. */
 window.QIAO_I18N = {
   hi: {
+    video: 'वीडियो', photos_n: '{0} फ़ोटो', uploading: 'अपलोड हो रहा है {0}/{1}… {2}%', too_many: 'एक बार में ज़्यादा से ज़्यादा 10 भेज सकते हैं।',
     upd_title: 'Qiao अपडेट हो गया 🎉', upd_body: '{0} सेकंड में रीफ़्रेश होगा…', upd_now: 'अभी रीफ़्रेश करें',
     news_hint: 'किसी पोस्ट पर टैप करके उसका थ्रेड खोलें।', thread_start: 'थ्रेड में जवाब दें', replies_one: '1 जवाब', replies_n: '{0} जवाब', replies_head: 'जवाब',
     th_custom: 'एक फ़ोटो', th_upload: 'अपनी फ़ोटो',
@@ -26,7 +27,7 @@ window.QIAO_I18N = {
     lobby: 'लॉबी', lobby_sub: 'सभी लोग', people: 'लोग',
     nobody: 'अभी यहाँ और कोई नहीं है। किसी दोस्त को बुलाएँ।',
     online: 'अभी यहाँ हैं', offline: 'दूर हैं',
-    older: 'पुराने संदेश दिखाएँ', send: 'भेजें', send_photo: 'फ़ोटो भेजें',
+    older: 'पुराने संदेश दिखाएँ', send: 'भेजें', send_photo: 'फ़ोटो या वीडियो भेजें',
     type_here: 'संदेश लिखें', empty_chat: 'अभी कोई संदेश नहीं। नमस्ते कहें।',
     typing: '{0} लिख रहे हैं…', photo: 'फ़ोटो', you: 'आप',
     today: 'आज', yesterday: 'कल',
@@ -46,12 +47,13 @@ window.QIAO_I18N = {
     err_name_taken: 'यह नाम पहले से किसी का है। दूसरा चुनें।',
     err_bad_login: 'नाम या पासवर्ड गलत है।',
     err_slow_down: 'बहुत ज़्यादा कोशिशें हुईं। कुछ मिनट रुकें।',
-    err_too_big: 'फ़ोटो बहुत बड़ी है। सीमा 6 MB है।',
-    err_bad_image: 'सिर्फ़ JPG, PNG, GIF और WebP फ़ोटो भेजी जा सकती हैं।',
+    err_too_big: 'फ़ाइल बहुत बड़ी है। फ़ोटो 15 MB तक और वीडियो 40 MB तक हो सकते हैं।',
+    err_bad_image: 'सिर्फ़ फ़ोटो (JPG, PNG, GIF, WebP) और वीडियो (MP4, WebM, MOV) भेजे जा सकते हैं।',
     err_network: 'सर्वर से संपर्क नहीं हो सका। अपना इंटरनेट जाँचें।',
     err_server: 'सर्वर में कुछ गड़बड़ हुई। फिर कोशिश करें।'
   },
   vi: {
+    video: 'Video', photos_n: '{0} ảnh', uploading: 'Đang tải lên {0}/{1}… {2}%', too_many: 'Mỗi lần gửi tối đa 10 tệp.',
     upd_title: 'Qiao đã được cập nhật 🎉', upd_body: 'Tự làm mới sau {0} giây…', upd_now: 'Làm mới ngay',
     news_hint: 'Chạm vào một bài để mở chủ đề của nó.', thread_start: 'Trả lời trong chủ đề', replies_one: '1 trả lời', replies_n: '{0} trả lời', replies_head: 'Trả lời',
     th_custom: 'một bức ảnh', th_upload: 'Ảnh của bạn',
@@ -75,7 +77,7 @@ window.QIAO_I18N = {
     lobby: 'Sảnh chung', lobby_sub: 'Mọi người', people: 'Bạn bè',
     nobody: 'Chưa có ai khác ở đây. Hãy mời một người bạn.',
     online: 'Đang ở đây', offline: 'Vắng mặt',
-    older: 'Xem tin nhắn cũ hơn', send: 'Gửi', send_photo: 'Gửi ảnh',
+    older: 'Xem tin nhắn cũ hơn', send: 'Gửi', send_photo: 'Gửi ảnh hoặc video',
     type_here: 'Viết tin nhắn', empty_chat: 'Chưa có tin nhắn nào. Hãy chào một câu.',
     typing: '{0} đang nhập…', photo: 'Ảnh', you: 'Bạn',
     today: 'Hôm nay', yesterday: 'Hôm qua',
@@ -95,12 +97,13 @@ window.QIAO_I18N = {
     err_name_taken: 'Tên này đã có người dùng. Hãy chọn tên khác.',
     err_bad_login: 'Sai tên hoặc mật khẩu.',
     err_slow_down: 'Bạn thử quá nhiều lần. Hãy đợi vài phút.',
-    err_too_big: 'Ảnh quá lớn. Giới hạn là 6 MB.',
-    err_bad_image: 'Chỉ gửi được ảnh JPG, PNG, GIF và WebP.',
+    err_too_big: 'Tệp quá lớn. Ảnh tối đa 15 MB, video tối đa 40 MB.',
+    err_bad_image: 'Chỉ gửi được ảnh (JPG, PNG, GIF, WebP) và video (MP4, WebM, MOV).',
     err_network: 'Không kết nối được với máy chủ. Hãy kiểm tra mạng.',
     err_server: 'Máy chủ gặp lỗi. Hãy thử lại.'
   },
   ja: {
+    video: '動画', photos_n: '写真 {0} 枚', uploading: 'アップロード中 {0}/{1}… {2}%', too_many: '一度に送れるのは 10 件までです。',
     upd_title: 'Qiao がアップデートされました 🎉', upd_body: '{0} 秒後に自動で更新します…', upd_now: '今すぐ更新',
     news_hint: '投稿をタップするとスレッドが開きます。', thread_start: 'スレッドで返信', replies_one: '返信 1 件', replies_n: '返信 {0} 件', replies_head: '返信',
     th_custom: '写真', th_upload: '自分の写真',
@@ -124,7 +127,7 @@ window.QIAO_I18N = {
     lobby: 'ロビー', lobby_sub: '全員', people: '友だち',
     nobody: 'まだほかに誰もいません。友だちを招待しましょう。',
     online: 'オンライン', offline: '不在',
-    older: '前のメッセージを表示', send: '送信', send_photo: '写真を送る',
+    older: '前のメッセージを表示', send: '送信', send_photo: '写真や動画を送る',
     type_here: 'メッセージを入力', empty_chat: 'まだメッセージがありません。あいさつしてみましょう。',
     typing: '{0} さんが入力中…', photo: '写真', you: 'あなた',
     today: '今日', yesterday: '昨日',
@@ -144,12 +147,13 @@ window.QIAO_I18N = {
     err_name_taken: 'この名前はすでに使われています。別の名前にしてください。',
     err_bad_login: '名前またはパスワードが違います。',
     err_slow_down: '試行回数が多すぎます。数分待ってください。',
-    err_too_big: '写真が大きすぎます。上限は 6 MB です。',
-    err_bad_image: '送れるのは JPG、PNG、GIF、WebP の写真だけです。',
+    err_too_big: 'ファイルが大きすぎます。写真は 15 MB、動画は 40 MB までです。',
+    err_bad_image: '送れるのは写真（JPG、PNG、GIF、WebP）と動画（MP4、WebM、MOV）だけです。',
     err_network: 'サーバーに接続できません。通信環境を確認してください。',
     err_server: 'サーバーで問題が起きました。もう一度お試しください。'
   },
   ko: {
+    video: '동영상', photos_n: '사진 {0}장', uploading: '업로드 중 {0}/{1}… {2}%', too_many: '한 번에 최대 10개까지 보낼 수 있어요.',
     upd_title: 'Qiao가 업데이트됐어요 🎉', upd_body: '{0}초 후 자동으로 새로고침해요…', upd_now: '지금 새로고침',
     news_hint: '게시물을 누르면 스레드가 열려요.', thread_start: '스레드에서 답장', replies_one: '답장 1개', replies_n: '답장 {0}개', replies_head: '답장',
     th_custom: '사진', th_upload: '내 사진',
@@ -173,7 +177,7 @@ window.QIAO_I18N = {
     lobby: '로비', lobby_sub: '모든 사람', people: '친구',
     nobody: '아직 다른 사람이 없습니다. 친구를 초대해 보세요.',
     online: '접속 중', offline: '자리 비움',
-    older: '이전 메시지 보기', send: '보내기', send_photo: '사진 보내기',
+    older: '이전 메시지 보기', send: '보내기', send_photo: '사진이나 동영상 보내기',
     type_here: '메시지 입력', empty_chat: '아직 메시지가 없습니다. 인사를 건네 보세요.',
     typing: '{0} 님이 입력 중…', photo: '사진', you: '나',
     today: '오늘', yesterday: '어제',
@@ -193,8 +197,8 @@ window.QIAO_I18N = {
     err_name_taken: '이미 사용 중인 이름입니다. 다른 이름을 골라 주세요.',
     err_bad_login: '이름 또는 비밀번호가 틀렸습니다.',
     err_slow_down: '시도 횟수가 너무 많습니다. 몇 분 뒤에 다시 해 주세요.',
-    err_too_big: '사진이 너무 큽니다. 최대 6 MB까지 가능합니다.',
-    err_bad_image: 'JPG, PNG, GIF, WebP 사진만 보낼 수 있습니다.',
+    err_too_big: '파일이 너무 커요. 사진은 15MB, 동영상은 40MB까지 보낼 수 있어요.',
+    err_bad_image: '사진(JPG, PNG, GIF, WebP)과 동영상(MP4, WebM, MOV)만 보낼 수 있어요.',
     err_network: '서버에 연결할 수 없습니다. 인터넷 연결을 확인해 주세요.',
     err_server: '서버에 문제가 생겼습니다. 다시 시도해 주세요.'
   }

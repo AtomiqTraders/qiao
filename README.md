@@ -5,6 +5,7 @@ so nobody needs an app store, a phone number, or a VPN.
 
 - Invite-only accounts (name + password)
 - Lobby for everyone, plus one-to-one chats
+- Up to 10 photos and videos per message (photos up to 15 MB, videos up to 40 MB), full-screen viewer
 - Photos, typing and "here now" indicators, unread counts
 - "Sent" and "Seen" under your latest message ("Seen by …" in the lobby)
 - Announcements channel: one card per post, each with its own reply thread anyone can join. Only the admin posts. Every entry in `updates.json` is posted there

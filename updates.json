@@ -70,5 +70,14 @@
     "vi": "🔄 Tự làm mới\nKhi Qiao được cập nhật, một cửa sổ sẽ đếm ngược từ 5 rồi trang tự làm mới. Bạn vẫn ở cuộc trò chuyện cũ và nội dung đang gõ vẫn được giữ lại.",
     "ja": "🔄 自動更新\nQiao がアップデートされると、5 からカウントダウンが表示され、ページが自動で更新されます。同じチャットのままで、入力中の文字も消えません。",
     "ko": "🔄 자동 새로고침\nQiao가 업데이트되면 5부터 카운트다운하는 창이 뜨고 페이지가 알아서 새로고침돼요. 보던 채팅에 그대로 있고, 쓰던 내용도 남아 있어요."
+  },
+  {
+    "id": "2026-11-16-media",
+    "en": "🎬 Videos and several photos at once\nTap the photo button and pick up to 10 photos and videos together. They arrive as one message. Tap any of them to view full screen and swipe through the rest.",
+    "zh": "🎬 一次发视频和多张照片\n点照片按钮，一次最多可以选 10 张照片和视频，会合成一条消息发出去。点任意一张就能全屏查看，左右滑动看其他的。",
+    "hi": "🎬 वीडियो और कई फ़ोटो एक साथ\nफ़ोटो बटन दबाएँ और एक साथ 10 तक फ़ोटो और वीडियो चुनें। ये एक ही संदेश में जाएँगे। किसी पर भी टैप करके पूरी स्क्रीन पर देखें और बाकी के लिए स्वाइप करें।",
+    "vi": "🎬 Gửi video và nhiều ảnh cùng lúc\nBấm nút ảnh và chọn tối đa 10 ảnh và video cùng lúc. Chúng được gửi thành một tin nhắn. Chạm vào bất kỳ ảnh nào để xem toàn màn hình và vuốt để xem tiếp.",
+    "ja": "🎬 動画や複数の写真をまとめて送信\n写真ボタンから写真と動画を最大 10 件まで一度に選べます。一つのメッセージとして届きます。タップすると全画面で見られ、スワイプで次へ進めます。",
+    "ko": "🎬 동영상과 여러 장의 사진을 한 번에\n사진 버튼을 눌러 사진과 동영상을 한 번에 최대 10개까지 고를 수 있어요. 하나의 메시지로 보내져요. 아무거나 누르면 전체 화면으로 보고, 옆으로 밀어 나머지도 볼 수 있어요."
   }
 ]

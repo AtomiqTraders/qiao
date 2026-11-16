@@ -106,7 +106,7 @@
         <label class="attach" id="attachBtn">
           <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="14" rx="3"/><circle cx="9" cy="10" r="1.6"/><path d="M4.5 17l5-4.5 3.5 3 3-2.5 4 3.5"/></svg>
           <span class="sr" data-i18n="send_photo"></span>
-          <input id="file" type="file" accept="image/jpeg,image/png,image/gif,image/webp" hidden>
+          <input id="file" type="file" accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm,video/quicktime" multiple hidden>
         </label>
         <textarea id="input" rows="1" maxlength="4000" enterkeyhint="send"></textarea>
         <button class="primary send" id="sendBtn" type="submit" data-i18n="send"></button>
@@ -163,7 +163,13 @@
   <button class="primary" id="updNow" type="button"></button>
 </dialog>
 
-<dialog id="photoDlg"><img id="photoBig" alt=""></dialog>
+<dialog id="viewer">
+  <div id="vStage"></div>
+  <button class="vbtn" id="vClose" type="button" data-i18n-label="close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  <button class="vbtn" id="vPrev" type="button" aria-label="Previous"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+  <button class="vbtn" id="vNext" type="button" aria-label="Next"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+  <div id="vCount"></div>
+</dialog>
 <div id="toast" role="status" hidden></div>
 
 <script src="/i18n.js"></script>
