@@ -67,7 +67,7 @@
         <button class="ghost" id="trToggle" type="button"></button>
       </div>
       <div class="me-row">
-        <span id="meName"></span>
+        <button class="me-btn" id="meBtn" type="button"><span id="meAv"></span><span class="me-text"><span id="meName"></span><span id="meMood"></span></span></button>
         <button class="ghost" id="logoutBtn" type="button" data-i18n="logout"></button>
       </div>
     </footer>
@@ -80,10 +80,10 @@
         <button class="ghost back" id="backBtn" type="button" aria-label="Back">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
         </button>
-        <div>
-          <h2 id="chatTitle"></h2>
-          <p id="chatSub"></p>
-        </div>
+        <button class="head-info" id="headInfo" type="button">
+          <span id="headAv"></span>
+          <span class="head-text"><h2 id="chatTitle"></h2><p id="chatSub"></p></span>
+        </button>
         <button class="ghost" id="themeBtn" type="button" data-i18n-label="theme_btn">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.2 0 1.8-.9 1.8-1.8 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-1 .8-1.8 1.8-1.8H17a4 4 0 0 0 4-4C21 6.6 17 3 12 3z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10.5" cy="7" r="1.2"/><circle cx="15" cy="7.5" r="1.2"/></svg>
         </button>
@@ -169,6 +169,42 @@
   <button class="vbtn" id="vPrev" type="button" aria-label="Previous"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
   <button class="vbtn" id="vNext" type="button" aria-label="Next"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
   <div id="vCount"></div>
+</dialog>
+<dialog id="profDlg" class="prof">
+  <button class="icon-btn prof-close" id="profClose" type="button" data-i18n-label="close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  <div class="prof-top">
+    <div class="prof-note" id="profNote" hidden></div>
+    <button class="prof-av" id="profAv" type="button"></button>
+    <h2 id="profName"></h2>
+    <p class="prof-bio" id="profBio"></p>
+    <p class="prof-tr" id="profBioTr" hidden></p>
+  </div>
+  <div class="prof-stats" id="profStats"></div>
+  <div class="prof-chips" id="profChips"></div>
+  <div class="row prof-acts"><button class="primary" id="profAct" type="button"></button></div>
+  <div id="profShared"></div>
+</dialog>
+
+<dialog id="editDlg" class="prof-edit">
+  <h2 data-i18n="edit_profile"></h2>
+  <div class="ed-photo">
+    <span id="edAv"></span>
+    <div class="ed-photo-btns">
+      <button class="ghost" id="edPhoto" type="button" data-i18n="change_photo"></button>
+      <button class="ghost" id="edNoPhoto" type="button" data-i18n="remove_photo"></button>
+    </div>
+    <input id="edFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif" hidden>
+  </div>
+  <label class="ed-field"><span data-i18n="p_name"></span><input id="edName" maxlength="20" autocomplete="off"></label>
+  <p class="ed-hint" id="edSignin"></p>
+  <label class="ed-field"><span data-i18n="p_mood"></span><span class="ed-mood"><input id="edMood" maxlength="40" autocomplete="off"><button class="ghost" id="edMoodClear" type="button" data-i18n="p_clear"></button></span></label>
+  <div class="mood-picks" id="moodPicks"></div>
+  <label class="ed-field"><span data-i18n="p_bio"></span><textarea id="edBio" rows="3" maxlength="150"></textarea><span class="ed-count" id="edCount"></span></label>
+  <div class="ed-field"><span data-i18n="p_color"></span><div class="ed-colors" id="edColors"></div></div>
+  <div class="row">
+    <button class="primary" id="edSave" type="button" data-i18n="save"></button>
+    <button class="ghost" id="edCancel" type="button" data-i18n="cancel"></button>
+  </div>
 </dialog>
 <div id="toast" role="status" hidden></div>
 

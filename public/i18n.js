@@ -3,6 +3,7 @@
    Any key missing here falls back to English. */
 window.QIAO_I18N = {
   hi: {
+    profile: 'प्रोफ़ाइल', edit_profile: 'प्रोफ़ाइल बदलें', message_btn: 'मैसेज', change_photo: 'फ़ोटो बदलें', remove_photo: 'हटाएँ', p_name: 'नाम', p_mood: 'मूड', p_mood_ph: 'अभी क्या कर रहे हैं?', p_bio: 'बायो', p_bio_ph: 'अपने बारे में कुछ शब्द', p_color: 'रंग (जब फ़ोटो न हो)', p_signin: 'आप “{0}” या नए नाम से साइन इन कर सकते हैं।', p_joined: '{0} से जुड़े', p_reads: 'पढ़ते हैं: {0}', st_msgs: 'मैसेज', st_media: 'फ़ोटो और वीडियो', st_days: 'दिन से बातचीत', st_days_me: 'दिन Qiao पर', st_sent: 'भेजे', p_shared: 'आपके बीच शेयर किए गए', p_none_shared: 'अभी कोई फ़ोटो या वीडियो नहीं', p_saved: 'प्रोफ़ाइल सेव हो गई ✨', p_no_bio: 'बायो लिखें ताकि दोस्त आपको बेहतर जानें।', p_clear: 'हटाएँ', err_too_long: 'यह बहुत लंबा है।',
     video: 'वीडियो', photos_n: '{0} फ़ोटो', uploading: 'अपलोड हो रहा है {0}/{1}… {2}%', too_many: 'एक बार में ज़्यादा से ज़्यादा 10 भेज सकते हैं।',
     upd_title: 'Qiao अपडेट हो गया 🎉', upd_body: '{0} सेकंड में रीफ़्रेश होगा…', upd_now: 'अभी रीफ़्रेश करें',
     news_hint: 'किसी पोस्ट पर टैप करके उसका थ्रेड खोलें।', thread_start: 'थ्रेड में जवाब दें', replies_one: '1 जवाब', replies_n: '{0} जवाब', replies_head: 'जवाब',
@@ -53,6 +54,7 @@ window.QIAO_I18N = {
     err_server: 'सर्वर में कुछ गड़बड़ हुई। फिर कोशिश करें।'
   },
   vi: {
+    profile: 'Trang cá nhân', edit_profile: 'Sửa hồ sơ', message_btn: 'Nhắn tin', change_photo: 'Đổi ảnh', remove_photo: 'Xoá', p_name: 'Tên', p_mood: 'Tâm trạng', p_mood_ph: 'Bạn đang làm gì?', p_bio: 'Giới thiệu', p_bio_ph: 'Vài dòng về bạn', p_color: 'Màu (khi không có ảnh)', p_signin: 'Bạn có thể đăng nhập bằng “{0}” hoặc tên mới.', p_joined: 'Tham gia {0}', p_reads: 'Đọc được {0}', st_msgs: 'tin nhắn', st_media: 'ảnh & video', st_days: 'ngày trò chuyện', st_days_me: 'ngày trên Qiao', st_sent: 'đã gửi', p_shared: 'Đã chia sẻ với nhau', p_none_shared: 'Chưa có ảnh hay video', p_saved: 'Đã lưu hồ sơ ✨', p_no_bio: 'Thêm lời giới thiệu để bạn bè hiểu bạn hơn.', p_clear: 'Xoá', err_too_long: 'Dài quá rồi.',
     video: 'Video', photos_n: '{0} ảnh', uploading: 'Đang tải lên {0}/{1}… {2}%', too_many: 'Mỗi lần gửi tối đa 10 tệp.',
     upd_title: 'Qiao đã được cập nhật 🎉', upd_body: 'Tự làm mới sau {0} giây…', upd_now: 'Làm mới ngay',
     news_hint: 'Chạm vào một bài để mở chủ đề của nó.', thread_start: 'Trả lời trong chủ đề', replies_one: '1 trả lời', replies_n: '{0} trả lời', replies_head: 'Trả lời',
@@ -103,6 +105,7 @@ window.QIAO_I18N = {
     err_server: 'Máy chủ gặp lỗi. Hãy thử lại.'
   },
   ja: {
+    profile: 'プロフィール', edit_profile: 'プロフィールを編集', message_btn: 'メッセージ', change_photo: '写真を変更', remove_photo: '削除', p_name: '名前', p_mood: 'ひとこと', p_mood_ph: '今なにしてる？', p_bio: '自己紹介', p_bio_ph: 'あなたについてひとこと', p_color: 'カラー（写真がないとき）', p_signin: 'ログインには「{0}」か新しい名前を使えます。', p_joined: '{0} に参加', p_reads: '読める言語：{0}', st_msgs: 'メッセージ', st_media: '写真と動画', st_days: '日間のトーク', st_days_me: '日間 Qiao に', st_sent: '送信', p_shared: 'ふたりで共有したもの', p_none_shared: 'まだ写真や動画はありません', p_saved: 'プロフィールを保存しました ✨', p_no_bio: '自己紹介を書いて、友だちにあなたを知ってもらおう。', p_clear: 'クリア', err_too_long: '長すぎます。',
     video: '動画', photos_n: '写真 {0} 枚', uploading: 'アップロード中 {0}/{1}… {2}%', too_many: '一度に送れるのは 10 件までです。',
     upd_title: 'Qiao がアップデートされました 🎉', upd_body: '{0} 秒後に自動で更新します…', upd_now: '今すぐ更新',
     news_hint: '投稿をタップするとスレッドが開きます。', thread_start: 'スレッドで返信', replies_one: '返信 1 件', replies_n: '返信 {0} 件', replies_head: '返信',
@@ -153,6 +156,7 @@ window.QIAO_I18N = {
     err_server: 'サーバーで問題が起きました。もう一度お試しください。'
   },
   ko: {
+    profile: '프로필', edit_profile: '프로필 편집', message_btn: '메시지', change_photo: '사진 변경', remove_photo: '삭제', p_name: '이름', p_mood: '기분', p_mood_ph: '지금 뭐 해요?', p_bio: '소개', p_bio_ph: '나에 대해 한마디', p_color: '색상 (사진이 없을 때)', p_signin: '“{0}” 또는 새 이름으로 로그인할 수 있어요.', p_joined: '{0} 가입', p_reads: '읽는 언어: {0}', st_msgs: '메시지', st_media: '사진·동영상', st_days: '일째 대화 중', st_days_me: '일째 Qiao', st_sent: '보냄', p_shared: '함께 나눈 사진', p_none_shared: '아직 사진이나 동영상이 없어요', p_saved: '프로필을 저장했어요 ✨', p_no_bio: '소개를 써서 친구들이 나를 더 잘 알게 해 보세요.', p_clear: '지우기', err_too_long: '너무 길어요.',
     video: '동영상', photos_n: '사진 {0}장', uploading: '업로드 중 {0}/{1}… {2}%', too_many: '한 번에 최대 10개까지 보낼 수 있어요.',
     upd_title: 'Qiao가 업데이트됐어요 🎉', upd_body: '{0}초 후 자동으로 새로고침해요…', upd_now: '지금 새로고침',
     news_hint: '게시물을 누르면 스레드가 열려요.', thread_start: '스레드에서 답장', replies_one: '답장 1개', replies_n: '답장 {0}개', replies_head: '답장',

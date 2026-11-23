@@ -79,5 +79,14 @@
     "vi": "🎬 Gửi video và nhiều ảnh cùng lúc\nBấm nút ảnh và chọn tối đa 10 ảnh và video cùng lúc. Chúng được gửi thành một tin nhắn. Chạm vào bất kỳ ảnh nào để xem toàn màn hình và vuốt để xem tiếp.",
     "ja": "🎬 動画や複数の写真をまとめて送信\n写真ボタンから写真と動画を最大 10 件まで一度に選べます。一つのメッセージとして届きます。タップすると全画面で見られ、スワイプで次へ進めます。",
     "ko": "🎬 동영상과 여러 장의 사진을 한 번에\n사진 버튼을 눌러 사진과 동영상을 한 번에 최대 10개까지 고를 수 있어요. 하나의 메시지로 보내져요. 아무거나 누르면 전체 화면으로 보고, 옆으로 밀어 나머지도 볼 수 있어요."
+  },
+  {
+    "id": "2026-11-24-profiles",
+    "en": "🪪 Profiles\nTap your name at the bottom of the chat list to edit your profile: add a profile photo, change your name, set a mood like “😴 sleeping”, and write a bio. Tap someone's name at the top of a chat to see their profile and every photo and video you've shared. Your old sign-in name still works.",
+    "zh": "🪪 个人主页\n点聊天列表最下面你的名字，就能编辑资料：换头像、改名字、设置心情（比如“😴 睡觉中”），再写一段简介。在聊天里点顶部对方的名字，可以看到对方的主页，还有你们分享过的所有照片和视频。原来的登录名字照样能用。",
+    "hi": "🪪 प्रोफ़ाइल\nचैट सूची में सबसे नीचे अपने नाम पर टैप करें और प्रोफ़ाइल बदलें: प्रोफ़ाइल फ़ोटो लगाएँ, नाम बदलें, “😴 सो रहा हूँ” जैसा मूड सेट करें और बायो लिखें। चैट में ऊपर किसी के नाम पर टैप करें, उनकी प्रोफ़ाइल और आपके बीच शेयर हुई सारी फ़ोटो और वीडियो दिखेंगे। पुराना साइन-इन नाम भी चलता रहेगा।",
+    "vi": "🪪 Trang cá nhân\nChạm vào tên bạn ở cuối danh sách trò chuyện để sửa hồ sơ: thêm ảnh đại diện, đổi tên, đặt tâm trạng như “😴 đang ngủ” và viết vài dòng giới thiệu. Chạm vào tên ai đó ở đầu cuộc trò chuyện để xem trang của họ và mọi ảnh, video hai bạn đã chia sẻ. Tên đăng nhập cũ vẫn dùng được.",
+    "ja": "🪪 プロフィール\nトーク一覧のいちばん下にある自分の名前をタップすると、プロフィールを編集できます。写真の設定、名前の変更、「😴 寝てる」のようなひとこと、自己紹介が書けます。トーク画面の上にある相手の名前をタップすると、相手のプロフィールとふたりで共有した写真や動画がすべて見られます。今までのログイン名もそのまま使えます。",
+    "ko": "🪪 프로필\n대화 목록 맨 아래의 내 이름을 누르면 프로필을 편집할 수 있어요. 프로필 사진을 넣고, 이름을 바꾸고, “😴 자는 중” 같은 기분을 정하고, 소개를 쓸 수 있어요. 대화 화면 위쪽의 상대 이름을 누르면 상대 프로필과 함께 나눈 사진·동영상을 모두 볼 수 있어요. 예전 로그인 이름도 그대로 쓸 수 있어요."
   }
 ]

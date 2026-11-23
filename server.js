@@ -204,11 +204,19 @@ function looking(uid) { for (const ws of sockets.get(uid) || []) if (ws.visible)
 const rid = (n = 9) => crypto.randomBytes(n).toString('base64url');
 const sha = s => crypto.createHash('sha256').update(s).digest('hex');
 const hashPw = (pw, salt) => crypto.scryptSync(pw, salt, 32).toString('hex');
-const pub = u => ({ id: u.id, name: u.name, color: u.color });
-const own = u => ({ ...pub(u), lang: u.lang || null, reads: u.reads || [], admin: !!u.admin, canInvite: !!u.admin || db.settings.invites === 'all' });
+const pub = u => ({ id: u.id, name: u.name, color: u.color, avatar: u.avatar || null, mood: u.mood || '' });
+const own = u => ({ ...pub(u), bio: u.bio || '', handle: u.handle || u.name, lang: u.lang || null, reads: u.reads || [], admin: !!u.admin, canInvite: !!u.admin || db.settings.invites === 'all' });
 const dmId = (a, b) => 'dm:' + [a, b].sort().join(':');
 function parseUrl(req) { try { return new URL(req.url, 'http://x'); } catch { return null; } }
 
+// display names: 2-20 characters, no control characters or angle brackets
+function cleanName(v) {
+  const name = String(v || '').normalize('NFC').replace(/\s+/g, ' ').trim();
+  if ([...name].length < 2 || [...name].length > 20 || /[\u0000-\u001f\u007f<>]/.test(name)) fail(400, 'bad_name');
+  return name;
+}
+// a name is taken when another person signs in with it or shows it
+const nameTaken = (key, exceptId) => Object.values(db.users).some(u => u.id !== exceptId && (u.key === key || u.name.toLowerCase() === key));
 function fail(status, code) { const e = new Error(code); e.status = status; e.code = code; throw e; }
 
 const hits = new Map();
@@ -384,6 +392,7 @@ function mediaKind(buf) {
   return null;
 }
 const IMAGE_RE = /\.(jpg|png|gif|webp)$/;
+const uploadedBy = new Map(); // file -> who uploaded it (this run), so a profile photo must be your own upload
 const goodMedia = n => typeof n === 'string' && UPLOAD_RE.test(n) && fs.existsSync(path.join(UP, n));
 function imageExt(buf) {
   if (buf.length < 12) return null;
@@ -417,14 +426,13 @@ async function route(req, res) {
     if (limited('su:' + ip(req), 20, 600000)) fail(429, 'slow_down');
     const b = await readJson(req);
     const inv = validInvite(b.invite); if (!inv) fail(400, 'bad_invite');
-    const name = String(b.name || '').normalize('NFC').replace(/\s+/g, ' ').trim();
+    const name = cleanName(b.name);
     const pw = String(b.password || '');
-    if ([...name].length < 2 || [...name].length > 20 || /[\u0000-\u001f\u007f<>]/.test(name)) fail(400, 'bad_name');
     if (pw.length < 6 || pw.length > 200) fail(400, 'bad_password');
     const key = name.toLowerCase();
-    if (Object.values(db.users).some(u => u.key === key)) fail(409, 'name_taken');
+    if (nameTaken(key)) fail(409, 'name_taken');
     const id = rid(8), salt = rid(12), n = Object.keys(db.users).length;
-    const user = db.users[id] = { id, name, key, salt, pass: hashPw(pw, salt), color: COLORS[n % COLORS.length], ts: Date.now(), read: {} };
+    const user = db.users[id] = { id, name, handle: name, key, salt, pass: hashPw(pw, salt), color: COLORS[n % COLORS.length], ts: Date.now(), read: {} };
     Object.assign(user, cleanPrefs(b.lang, b.reads) || {});
     if (inv.by) user.by = inv.by; else if (n === 0) user.admin = true;
     inv.used = id; save();
@@ -437,7 +445,7 @@ async function route(req, res) {
     const b = await readJson(req);
     const key = String(b.name || '').normalize('NFC').replace(/\s+/g, ' ').trim().toLowerCase();
     if (limited('li:' + ip(req), 40, 600000) || limited('ln:' + key, 10, 600000)) fail(429, 'slow_down');
-    const user = Object.values(db.users).find(u => u.key === key);
+    const user = Object.values(db.users).find(u => u.key === key) || Object.values(db.users).find(u => u.name.toLowerCase() === key);
     const given = Buffer.from(hashPw(String(b.password || ''), user ? user.salt : 'x'), 'hex');
     if (!user || !crypto.timingSafeEqual(given, Buffer.from(user.pass, 'hex'))) fail(401, 'bad_login');
     startSession(req, res, user.id);
@@ -464,6 +472,58 @@ async function route(req, res) {
     const b = await readJson(req);
     const prefs = cleanPrefs(b.lang, b.reads); if (!prefs) fail(400, 'bad_request');
     Object.assign(me, prefs); save();
+    return json(res, 200, { me: own(me) });
+  }
+
+  // ---- profiles ----
+  if (p === '/api/profile' && req.method === 'GET') {
+    const u = db.users[url.searchParams.get('id') || ''];
+    if (!u) fail(404, 'not_found');
+    const out = { user: pub(u), bio: u.bio || '', ts: u.ts, lang: u.lang || null, reads: u.reads || [] };
+    const pics = f => (f.media || (f.img ? [f.img] : [])).length;
+    if (u.id === me.id) {
+      let sent = 0, media = 0;
+      for (const a of convs.values()) for (const m of a) if (m.from === me.id && !m.sys) { sent++; media += pics(m); }
+      Object.assign(out, { sent, mediaCount: media });
+    } else {
+      const a = convs.get(dmId(me.id, u.id)) || [];
+      const media = [];
+      for (let i = a.length - 1; i >= 0 && media.length < 90; i--) for (const f of a[i].media || (a[i].img ? [a[i].img] : [])) media.push(f);
+      let mediaCount = 0; for (const m of a) mediaCount += pics(m);
+      const first = a.find(m => !m.sys);
+      Object.assign(out, { count: a.filter(m => !m.sys).length, mediaCount, since: first ? first.ts : null, media: media.slice(0, 90) });
+      // bio and mood in the reader's language, when they are written in one the reader doesn't read
+      const tl = (text, tag) => text ? Promise.race([translateFor(me, { id: 'p:' + u.id + ':' + tag + ':' + sha(text).slice(0, 10), text }, me.lang).catch(() => null), new Promise(r => setTimeout(r, 5000, null))]) : null;
+      [out.bioTr, out.moodTr] = await Promise.all([tl(u.bio, 'bio'), tl(u.mood, 'mood')]);
+    }
+    return json(res, 200, out);
+  }
+  if (p === '/api/profile' && req.method === 'POST') {
+    if (limited('pf:' + me.id, 30, 600000)) fail(429, 'slow_down');
+    const b = await readJson(req);
+    const clean = (v, max, lines) => {
+      let x = String(v == null ? '' : v).normalize('NFC').replace(/\r/g, '').replace(/[\u0000-\u0009\u000b-\u001f\u007f]/g, '');
+      x = lines ? x.split('\n').map(l => l.trimEnd()).slice(0, lines).join('\n').trim() : x.replace(/\s+/g, ' ').trim();
+      if ([...x].length > max) fail(400, 'too_long');
+      return x;
+    };
+    const next = {};
+    if (b.name !== undefined) {
+      const name = cleanName(b.name);
+      if (name !== me.name && nameTaken(name.toLowerCase(), me.id)) fail(409, 'name_taken');
+      next.name = name;
+    }
+    if (b.bio !== undefined) next.bio = clean(b.bio, 150, 4);
+    if (b.mood !== undefined) next.mood = clean(b.mood, 40, 0);
+    if (b.color !== undefined) { if (!COLORS.includes(b.color)) fail(400, 'bad_request'); next.color = b.color; }
+    if (b.avatar !== undefined && b.avatar !== me.avatar) {
+      if (b.avatar !== null && !(goodMedia(b.avatar) && IMAGE_RE.test(b.avatar) && uploadedBy.get(b.avatar) === me.id)) fail(400, 'bad_image');
+      next.avatar = b.avatar;
+    }
+    if (!me.handle) me.handle = me.name; // the name they first signed in with keeps working
+    if ('avatar' in next && me.avatar) fs.unlink(path.join(UP, me.avatar), () => {});
+    for (const k of Object.keys(next)) { if (next[k] === null || next[k] === '') delete me[k]; else me[k] = next[k]; }
+    save(); broadcast({ t: 'user', user: pub(me) });
     return json(res, 200, { me: own(me) });
   }
 
@@ -510,7 +570,8 @@ async function route(req, res) {
       return json(res, 200, { password });
     }
     if (p === '/api/admin/remove') {
-      signOut(); delete db.users[target.id];
+      signOut(); if (target.avatar) fs.unlink(path.join(UP, target.avatar), () => {});
+      delete db.users[target.id];
       for (const c of Object.keys(db.invites)) if (db.invites[c].by === target.id && !db.invites[c].used) delete db.invites[c];
       save(); broadcast({ t: 'gone', id: target.id });
       return json(res, 200, { ok: true });
@@ -586,6 +647,7 @@ async function route(req, res) {
       if (!kind.video && size > MAX_IMAGE) fail(413, 'too_big');
       const name = rid(12) + '.' + kind.ext;
       await fs.promises.rename(tmp, path.join(UP, name));
+      uploadedBy.set(name, me.id);
       return json(res, 200, { name, video: kind.video });
     } finally { fs.unlink(tmp, () => {}); }
   }

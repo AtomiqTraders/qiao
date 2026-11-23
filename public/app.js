@@ -59,6 +59,7 @@
       err_slow_down: 'Too many tries. Wait a few minutes.',
       err_too_big: 'That file is too large. Photos can be up to 15 MB and videos up to 40 MB.',
       err_bad_image: 'Only photos (JPG, PNG, GIF, WebP) and videos (MP4, WebM, MOV) can be sent.',
+      profile: 'Profile', edit_profile: 'Edit profile', message_btn: 'Message', change_photo: 'Change photo', remove_photo: 'Remove', p_name: 'Name', p_mood: 'Mood', p_mood_ph: 'What are you up to?', p_bio: 'Bio', p_bio_ph: 'A few words about you', p_color: 'Colour (when there is no photo)', p_signin: 'You can sign in with “{0}” or your new name.', p_joined: 'Joined {0}', p_reads: 'Reads {0}', st_msgs: 'messages', st_media: 'photos & videos', st_days: 'days chatting', st_days_me: 'days on Qiao', st_sent: 'sent', p_shared: 'Shared between you', p_none_shared: 'No photos or videos yet', p_saved: 'Profile saved ✨', p_no_bio: 'Add a bio so friends get to know you.', p_clear: 'Clear', err_too_long: 'That is too long.',
       video: 'Video', photos_n: '{0} photos', uploading: 'Uploading {0}/{1}… {2}%', too_many: 'You can send up to 10 at once.',
       err_network: 'Could not reach the server. Check your connection.',
       err_server: 'Something went wrong on the server. Try again.'
@@ -112,6 +113,7 @@
       err_slow_down: '尝试次数太多，请等几分钟。',
       err_too_big: '文件太大了。照片最大 15 MB，视频最大 40 MB。',
       err_bad_image: '只能发送照片（JPG、PNG、GIF、WebP）和视频（MP4、WebM、MOV）。',
+      profile: '个人主页', edit_profile: '编辑资料', message_btn: '发消息', change_photo: '换头像', remove_photo: '删除', p_name: '名字', p_mood: '心情', p_mood_ph: '你在做什么？', p_bio: '简介', p_bio_ph: '介绍一下自己吧', p_color: '颜色（没有头像时显示）', p_signin: '登录时可以用“{0}”或新名字。', p_joined: '{0} 加入', p_reads: '看得懂 {0}', st_msgs: '条消息', st_media: '照片和视频', st_days: '天聊天', st_days_me: '天在桥上', st_sent: '已发送', p_shared: '你们分享过的', p_none_shared: '还没有照片或视频', p_saved: '资料已保存 ✨', p_no_bio: '写个简介，让朋友更了解你。', p_clear: '清除', err_too_long: '太长了。',
       video: '视频', photos_n: '{0} 张照片', uploading: '正在上传 {0}/{1}… {2}%', too_many: '一次最多发送 10 个。',
       err_network: '连接不上服务器，请检查网络。',
       err_server: '服务器出了点问题，请再试一次。'
@@ -344,10 +346,12 @@
   function roomRow(conv, title, sub, user) {
     const b = el('button', 'room'); b.type = 'button';
     if (conv === current || (conv === 'news' && current && current.startsWith('th:'))) b.setAttribute('aria-current', 'true');
-    const av = el('span', 'avatar' + (user ? '' : ' lobby'), user ? [...user.name][0].toUpperCase() : conv === 'news' ? '📣' : '桥');
-    if (user) { av.style.background = user.color; av.append(el('span', 'flame' + (online.has(user.id) ? ' lit' : ''))); }
-    const text = el('span', 'text');
-    text.append(el('div', 'who', title), el('div', 'last', sub));
+    const av = user ? avatarEl(user) : el('span', 'avatar lobby', conv === 'news' ? '📣' : '桥');
+    if (user) av.append(el('span', 'flame' + (online.has(user.id) ? ' lit' : '')));
+    const text = el('span', 'text'), who = el('div', 'who');
+    who.append(el('span', 'who-name', title));
+    if (user && user.mood) who.append(el('span', 'mood-chip', user.mood));
+    text.append(who, el('div', 'last', sub));
     b.append(av, text);
     let n = (convs[conv] && convs[conv].unread) || 0;
     if (conv === 'news') for (const k of Object.keys(convs)) if (k.startsWith('th:')) n += convs[k].unread || 0;
@@ -368,11 +372,158 @@
       const c = convs[dmId(u.id)];
       box.append(roomRow(dmId(u.id), u.name, preview(c && c.last) || t(online.has(u.id) ? 'online' : 'offline'), u));
     }
-    $('#meName').textContent = me.name;
+    $('#meName').textContent = me.name; $('#meMood').textContent = me.mood || t('edit_profile');
+    $('#meAv').replaceChildren(avatarEl(me, 'sm'));
     $('#adminLink').hidden = !me.admin; $('#inviteBtn').hidden = !me.canInvite;
     const total = Object.values(convs).reduce((n, c) => n + (c.unread || 0), 0);
     document.title = (total ? '(' + total + ') ' : '') + 'Qiao 桥';
   }
+
+  // ---------- profiles ----------
+  // a round picture: their photo, or their first letter on their colour
+  function avatarEl(u, size) {
+    const a = el('span', 'avatar' + (size ? ' ' + size : ''));
+    a.style.background = u.color;
+    if (u.avatar) { const img = el('img'); img.src = '/u/' + u.avatar; img.alt = ''; img.draggable = false; a.append(img); a.classList.add('has-photo'); }
+    else a.textContent = [...(u.name || '?')][0].toUpperCase();
+    return a;
+  }
+  const fmtN = n => Number(n || 0).toLocaleString(LOCALE[lang]);
+  const daysSince = ts => ts ? Math.max(1, Math.ceil((Date.now() - ts) / 864e5)) : 0;
+  let profId = null, profData = null;
+  async function openProfile(id) {
+    const u = users.get(id); if (!u) return;
+    profId = id; profData = null; drawProfile(u, null);
+    if (!$('#profDlg').open) $('#profDlg').showModal();
+    try {
+      const d = await api('/api/profile?id=' + encodeURIComponent(id));
+      if (profId === id && $('#profDlg').open) { profData = d; drawProfile(users.get(id) || d.user, d); }
+    } catch (e) { toast(errText(e.code)); }
+  }
+  function drawProfile(u, d) {
+    const self = u.id === me.id;
+    const note = $('#profNote'); note.hidden = !u.mood; note.textContent = u.mood || '';
+    if (d && d.moodTr) note.append(el('span', 'note-tr', d.moodTr));
+    const av = avatarEl(u, 'xl'); if (!self) av.append(el('span', 'flame' + (online.has(u.id) ? ' lit' : '')));
+    $('#profAv').replaceChildren(av); $('#profAv').classList.toggle('lit', self || online.has(u.id));
+    $('#profAv').onclick = () => { if (u.avatar) openViewer([u.avatar], 0); else if (self) openEdit(); };
+    $('#profName').textContent = u.name;
+    const bio = d ? d.bio : '';
+    $('#profBio').textContent = bio || (self && d ? t('p_no_bio') : '');
+    $('#profBio').classList.toggle('blank', !bio);
+    $('#profBioTr').hidden = !(d && d.bioTr); $('#profBioTr').textContent = (d && d.bioTr) || '';
+    const stats = $('#profStats'); stats.textContent = '';
+    const nums = !d ? [['–', 'st_msgs'], ['–', 'st_media'], ['–', self ? 'st_days_me' : 'st_days']]
+      : self ? [[fmtN(d.sent), 'st_sent'], [fmtN(d.mediaCount), 'st_media'], [fmtN(daysSince(d.ts)), 'st_days_me']]
+      : [[fmtN(d.count), 'st_msgs'], [fmtN(d.mediaCount), 'st_media'], [fmtN(daysSince(d.since)), 'st_days']];
+    for (const [n, k] of nums) { const c = el('div', 'stat'); c.append(el('b', null, n), el('span', null, t(k))); stats.append(c); }
+    const chips = $('#profChips'); chips.textContent = '';
+    if (d) {
+      chips.append(el('span', 'pchip', '🗓 ' + t('p_joined', new Date(d.ts).toLocaleDateString(LOCALE[lang], { month: 'long', year: 'numeric' }))));
+      const reads = (d.reads && d.reads.length ? d.reads : d.lang ? [d.lang] : []).map(l => LANGS[l]).filter(Boolean);
+      if (reads.length) chips.append(el('span', 'pchip', '🌐 ' + t('p_reads', reads.join(' · '))));
+    }
+    const act = $('#profAct');
+    act.textContent = t(self ? 'edit_profile' : 'message_btn');
+    act.onclick = () => { if (self) openEdit(); else { $('#profDlg').close(); openConv(dmId(u.id), true); } };
+    const sh = $('#profShared'); sh.textContent = '';
+    if (!self && d) {
+      sh.append(el('h3', 'prof-h', t('p_shared')));
+      if (!d.media.length) sh.append(el('p', 'prof-none', t('p_none_shared')));
+      const grid = el('div', 'prof-grid');
+      d.media.forEach((f, i) => {
+        const cell = el('button', 'pcell'); cell.type = 'button';
+        if (isVideo(f)) { const v = el('video'); v.src = '/u/' + f + '#t=0.1'; v.muted = true; v.preload = 'metadata'; v.playsInline = true; cell.append(v, el('span', 'play')); }
+        else { const img = el('img'); img.src = '/u/' + f; img.alt = t('photo'); img.loading = 'lazy'; img.draggable = false; cell.append(img); }
+        cell.addEventListener('click', () => openViewer(d.media, i));
+        grid.append(cell);
+      });
+      sh.append(grid);
+    }
+  }
+  $('#profClose').addEventListener('click', () => $('#profDlg').close());
+  $('#profDlg').addEventListener('click', ev => { if (ev.target === $('#profDlg')) $('#profDlg').close(); });
+  $('#profDlg').addEventListener('close', () => { profId = null; });
+  $('#meBtn').addEventListener('click', () => openProfile(me.id));
+  $('#headInfo').addEventListener('click', () => { const u = otherOf(current); if (u) openProfile(u.id); });
+
+  // editing your own profile
+  const MOODS = ['😊', '😴', '🎮', '📚', '🎵', '☕', '🍜', '🌙', '💪', '✈️', '🤒', '❤️'];
+  const COLORS = ['#f2b950', '#7fd1ae', '#f08a6b', '#8fb8f0', '#d9a0e8', '#b9d86a', '#f0a3b5', '#6fd3d8'];
+  const LEAD_EMOJI = /^(\p{Extended_Pictographic}(️|‍\p{Extended_Pictographic})*\s*)+/u;
+  let edAvatar, edColor;
+  function drawEdit() {
+    const name = $('#edName').value.trim() || me.name;
+    const u = { ...me, name, color: edColor, avatar: edAvatar === undefined ? me.avatar : edAvatar };
+    $('#edAv').replaceChildren(avatarEl(u, 'lg')); $('#edNoPhoto').hidden = !u.avatar;
+    const handle = me.handle || me.name;
+    $('#edSignin').hidden = name === handle; $('#edSignin').textContent = t('p_signin', handle);
+    $('#edCount').textContent = [...$('#edBio').value].length + ' / 150';
+    for (const b of $('#edColors').children) b.setAttribute('aria-pressed', String(b.dataset.c === edColor));
+    for (const b of $('#moodPicks').children) b.setAttribute('aria-pressed', String($('#edMood').value.startsWith(b.textContent)));
+  }
+  function openEdit() {
+    edAvatar = undefined; edColor = me.color;
+    $('#edName').value = me.name; $('#edMood').value = me.mood || ''; $('#edBio').value = me.bio || '';
+    $('#edMood').placeholder = t('p_mood_ph'); $('#edBio').placeholder = t('p_bio_ph');
+    const cs = $('#edColors'); cs.textContent = '';
+    for (const c of COLORS) { const b = el('button', 'ed-color'); b.type = 'button'; b.dataset.c = c; b.style.background = c; b.setAttribute('aria-label', c); b.addEventListener('click', () => { edColor = c; drawEdit(); }); cs.append(b); }
+    const mp = $('#moodPicks'); mp.textContent = '';
+    for (const e of MOODS) {
+      const b = el('button', 'mood-pick', e); b.type = 'button';
+      b.addEventListener('click', () => { const rest = $('#edMood').value.replace(LEAD_EMOJI, '').trim(); $('#edMood').value = (e + ' ' + rest).slice(0, 40); drawEdit(); $('#edMood').focus(); });
+      mp.append(b);
+    }
+    drawEdit();
+    if (!$('#editDlg').open) $('#editDlg').showModal();
+  }
+  for (const id of ['#edName', '#edMood', '#edBio']) $(id).addEventListener('input', drawEdit);
+  $('#edMoodClear').addEventListener('click', () => { $('#edMood').value = ''; drawEdit(); });
+  $('#edPhoto').addEventListener('click', () => $('#edFile').click());
+  $('#edNoPhoto').addEventListener('click', () => { edAvatar = null; drawEdit(); });
+  $('#edCancel').addEventListener('click', () => $('#editDlg').close());
+  $('#editDlg').addEventListener('click', ev => { if (ev.target === $('#editDlg')) $('#editDlg').close(); });
+  // profile photos are cut to a centred square, which also drops hidden location data
+  function squareCrop(file, size) {
+    return new Promise(resolve => {
+      if (file.type === 'image/gif') return resolve(file); // keep GIFs moving
+      const img = new Image(), url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const side = Math.min(img.width, img.height), out = Math.min(size, side);
+        const cv = document.createElement('canvas'); cv.width = cv.height = out;
+        cv.getContext('2d').drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, out, out);
+        cv.toBlob(b => resolve(b || file), 'image/jpeg', 0.88);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+      img.src = url;
+    });
+  }
+  $('#edFile').addEventListener('change', async ev => {
+    const file = ev.target.files[0]; ev.target.value = ''; if (!file) return;
+    const box = $('#edAv'); box.classList.add('busy');
+    try {
+      const blob = await squareCrop(file, 640);
+      if (blob.size > 6 * 1024 * 1024) { const e = new Error('too_big'); e.code = 'too_big'; throw e; }
+      const r = await api('/api/upload', { method: 'POST', headers: { 'Content-Type': blob.type || 'application/octet-stream' }, body: blob });
+      if (r.video) { const e = new Error('bad_image'); e.code = 'bad_image'; throw e; }
+      edAvatar = r.name; drawEdit();
+    } catch (e) { toast(errText(e.code)); }
+    finally { box.classList.remove('busy'); }
+  });
+  $('#edSave').addEventListener('click', async () => {
+    const btn = $('#edSave'); if (btn.disabled) return; btn.disabled = true;
+    const body = { name: $('#edName').value, mood: $('#edMood').value, bio: $('#edBio').value, color: edColor };
+    if (edAvatar !== undefined) body.avatar = edAvatar;
+    try {
+      const d = await post('/api/profile', body);
+      me = d.me; users.set(me.id, { ...users.get(me.id), ...me });
+      $('#editDlg').close(); toast(t('p_saved'));
+      renderSide(); if (current) renderHead();
+      if ($('#profDlg').open && profId === me.id) openProfile(me.id);
+    } catch (e) { toast(errText(e.code)); }
+    finally { btn.disabled = false; }
+  });
 
   // ---------- messages ----------
   $('#gameBtn').addEventListener('click', () => { if ($('#gameDlg').open) return; $('#gameDlg').showModal(); });
@@ -420,6 +571,10 @@
     const readOnly = current === 'news' && !me.admin; // only the admin posts announcements; everyone can reply in threads
     $('#composer').hidden = readOnly; $('#newsNote').hidden = !readOnly;
     $('#newsNote').textContent = t('news_readonly'); $('#newsNote').append(el('span', 'hint-line', t('news_hint')));
+    const hu = otherOf(current);
+    const hav = hu ? avatarEl(hu, 'md') : el('span', 'avatar md lobby', current === 'lobby' ? '桥' : '📣');
+    if (hu) hav.append(el('span', 'flame' + (online.has(hu.id) ? ' lit' : '')));
+    $('#headAv').replaceChildren(hav); $('#headInfo').disabled = !hu;
     if (thread) {
       const root = cache[current] && cache[current].root;
       $('#chatTitle').textContent = root ? postTitle(root) : t('news');
@@ -428,7 +583,7 @@
     }
     const u = otherOf(current), group = current === 'news' ? 'news' : 'lobby';
     $('#chatTitle').textContent = u ? u.name : t(group);
-    $('#chatSub').textContent = u ? t(online.has(u.id) ? 'online' : 'offline') : t(group + '_sub');
+    $('#chatSub').textContent = u ? t(online.has(u.id) ? 'online' : 'offline') + (u.mood ? ' · ' + u.mood : '') : t(group + '_sub');
   }
   function dayLabel(ts) {
     const d = new Date(ts), now = new Date();
@@ -464,7 +619,10 @@
     wrap.dataset.id = m.id;
     const u = users.get(m.from);
     if (!current.startsWith('dm:') && !mine && !sameRun(prev, m)) {
-      const f = el('div', 'from', nameOf(m.from)); if (u) f.style.color = u.color; else if (m.from === 'qiao') f.style.color = 'var(--candle)'; wrap.append(f);
+      const f = el('div', 'from'); if (u) { f.style.color = u.color; f.append(avatarEl(u, 'xs')); } else if (m.from === 'qiao') f.style.color = 'var(--candle)';
+      f.append(nameOf(m.from));
+      if (u) { f.classList.add('tap'); f.addEventListener('click', () => openProfile(u.id)); }
+      wrap.append(f);
     }
     const b = el('div', 'bubble');
     if (m.re) b.append(quoteNode(m.re));
@@ -1038,7 +1196,12 @@
       if (dm && current === dm) { current = null; document.body.classList.remove('in-chat'); $('#pane').hidden = true; $('#noChat').hidden = false; }
       renderSide(); if (current) renderMsgs(true);
     } else if (d.t === 'user') {
-      users.set(d.user.id, d.user); renderSide();
+      const old = users.get(d.user.id);
+      users.set(d.user.id, d.user);
+      if (me && d.user.id === me.id) Object.assign(me, d.user);
+      renderSide();
+      if (current) { renderHead(); if (!old || old.name !== d.user.name || old.avatar !== d.user.avatar || old.color !== d.user.color) renderMsgs(true); }
+      if ($('#profDlg').open && profId === d.user.id) drawProfile(d.user, profData);
     } else if (d.t === 'read') {
       if (convs[d.conv]) { convs[d.conv].unread = 0; renderSide(); }
     } else if (d.t === 'hello') {
